@@ -1,0 +1,942 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Zendex</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: sticky account bar, two-panel lobby (create | join), logo + prompt bar, workspace with members rail, preview and prompt bar. */
+:root{
+  --bg:#f4f1fb;--bg2:#ebe6f7;--panel:#ffffff;--panel2:#f6f2fd;--ink:#120d22;--muted:#5b5372;--line:#d9d1ee;
+  --accent:#6d28d9;--accent-ink:#ffffff;--accent-soft:#eadfff;--good:#15803d;--bad:#c0262d;--warn:#a15c07;
+  --rain:#6d28d9;--shadow:0 12px 32px rgba(45,20,100,.14);--logo-fill:#0a0612;--logo-line:#ffffff;--logo-glitch:#8b5cf6;
+  --f-display:'Chakra Petch',system-ui,sans-serif;--f-body:'IBM Plex Sans',system-ui,sans-serif;--f-mono:'JetBrains Mono',ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#09060f;--bg2:#0f0a1a;--panel:#130d22;--panel2:#1a1230;--ink:#f1ecff;--muted:#a99fc6;--line:#2d2249;
+  --accent:#9b6bff;--accent-ink:#0a0612;--accent-soft:#271b49;--good:#4ade80;--bad:#ff6b73;--warn:#fbbf24;
+  --rain:#9b6bff;--shadow:0 12px 32px rgba(0,0,0,.5);--logo-fill:#05030a;--logo-line:#ffffff;--logo-glitch:#a78bfa;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#09060f;--bg2:#0f0a1a;--panel:#130d22;--panel2:#1a1230;--ink:#f1ecff;--muted:#a99fc6;--line:#2d2249;
+  --accent:#9b6bff;--accent-ink:#0a0612;--accent-soft:#271b49;--good:#4ade80;--bad:#ff6b73;--warn:#fbbf24;
+  --rain:#9b6bff;--shadow:0 12px 32px rgba(0,0,0,.5);--logo-fill:#05030a;--logo-line:#ffffff;--logo-glitch:#a78bfa;color-scheme:dark}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body);overflow-x:hidden}
+*{box-sizing:border-box}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+#app{position:relative;z-index:1;min-height:100%;display:flex;flex-direction:column}
+.wrap{width:min(1120px,100%);margin-inline:auto;padding-inline:16px}
+h1,h2,h3{font-family:var(--f-display);margin:0;letter-spacing:.01em}
+.mono{font-family:var(--f-mono)}
+.muted{color:var(--muted)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+/* wordmark + logo glitch */
+.wordmark{position:relative;display:inline-block;font:700 1.35rem/1 var(--f-display);letter-spacing:.22em;color:var(--ink)}
+.wordmark::before,.wordmark::after{content:attr(data-t);position:absolute;left:0;top:0;width:100%;overflow:hidden}
+.wordmark::before{color:var(--logo-glitch);animation:gl1 4.2s infinite steps(1)}
+.wordmark::after{color:var(--ink);opacity:.7;animation:gl2 3.6s infinite steps(1)}
+.wordmark.big{font-size:clamp(2rem,6vw,3.2rem)}
+@keyframes gl1{0%,88%,100%{clip-path:inset(0 0 100% 0);transform:none}90%{clip-path:inset(10% 0 55% 0);transform:translate(-3px,0)}93%{clip-path:inset(60% 0 8% 0);transform:translate(3px,0)}96%{clip-path:inset(30% 0 40% 0);transform:translate(-2px,0)}}
+@keyframes gl2{0%,70%,100%{clip-path:inset(0 0 100% 0);transform:none}72%{clip-path:inset(40% 0 30% 0);transform:translate(3px,1px)}75%{clip-path:inset(5% 0 80% 0);transform:translate(-3px,0)}}
+.zlogo{display:block;overflow:visible}
+.zlogo .gA,.zlogo .gB{animation:zg1 5s infinite steps(1)}
+.zlogo .gB{animation-name:zg2;animation-duration:4.4s}
+@keyframes zg1{0%,86%,100%{clip-path:inset(0 0 100% 0);transform:none}88%{clip-path:inset(12% 0 58% 0);transform:translate(-8px,0)}91%{clip-path:inset(58% 0 12% 0);transform:translate(7px,0)}94%{clip-path:inset(32% 0 38% 0);transform:translate(-4px,0)}}
+@keyframes zg2{0%,76%,100%{clip-path:inset(0 0 100% 0);transform:none}78%{clip-path:inset(45% 0 25% 0);transform:translate(6px,1px)}81%{clip-path:inset(8% 0 78% 0);transform:translate(-6px,-1px)}}
+.zlogo .node{animation:pulse 2.8s infinite ease-in-out}
+@keyframes pulse{50%{opacity:.35}}
+body.noglitch .wordmark::before,body.noglitch .wordmark::after,body.noglitch .zlogo .gA,body.noglitch .zlogo .gB,body.noglitch .zlogo .node{animation:none}
+body.noglitch .zlogo .gA,body.noglitch .zlogo .gB{clip-path:inset(0 0 100% 0)}
+@media (prefers-reduced-motion:reduce){.wordmark::before,.wordmark::after,.zlogo .gA,.zlogo .gB,.zlogo .node{animation:none}.zlogo .gA,.zlogo .gB{clip-path:inset(0 0 100% 0)}}
+
+/* top bar */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:12px;min-height:58px;flex-wrap:wrap;padding-block:8px}
+.brand{display:flex;align-items:center;gap:10px;background:none;border:0;padding:0}
+.welcome{flex:1;min-width:0;display:flex;gap:14px;align-items:baseline;flex-wrap:wrap}
+.welcome strong{font:600 1.05rem var(--f-display)}
+.clock{font:500 .82rem var(--f-mono);color:var(--muted)}
+.pill{font:600 .68rem var(--f-mono);letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:99px;border:1px solid var(--line);color:var(--muted)}
+.pill.live{color:var(--good);border-color:color-mix(in srgb,var(--good) 50%,transparent)}
+.avatar{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font:700 .95rem var(--f-display);flex:none;border:2px solid var(--line)}
+.avatar.sm{width:26px;height:26px;font-size:.78rem}
+.avatar.btn-av{border:2px solid var(--accent);padding:0}
+.bar2 .wrap{display:flex;align-items:center;gap:8px;padding-block:10px;flex-wrap:wrap}
+.iconbtn{display:inline-grid;place-items:center;width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--panel);position:relative}
+.iconbtn:hover{border-color:var(--accent)}
+.iconbtn svg{width:19px;height:19px}
+.iconbtn .dot{position:absolute;top:-4px;right:-4px;min-width:17px;height:17px;border-radius:9px;background:var(--bad);color:#fff;font:600 .65rem/17px var(--f-mono);text-align:center;padding:0 4px}
+.tabs{display:flex;gap:4px;margin-inline:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px}
+.tab{border:0;background:none;padding:8px 16px;border-radius:9px;font:600 .92rem var(--f-display);color:var(--muted)}
+.tab[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
+.menu{position:absolute;right:16px;top:calc(100% - 2px);width:min(300px,calc(100% - 32px));background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:8px;z-index:30}
+.menu h4{margin:8px 10px 4px;font:600 .68rem var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.mi{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border:0;background:none;border-radius:9px;text-align:left}
+.mi:hover{background:var(--panel2)}
+.mi svg{width:17px;height:17px;flex:none}
+.mi .grow{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mi[aria-current="true"]{background:var(--accent-soft)}
+
+/* buttons + fields */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:9px 16px;font-weight:600}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 50%,var(--line))}
+.btn.sm{padding:5px 11px;font-size:.84rem;border-radius:8px}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.btn svg{width:16px;height:16px}
+.field{display:grid;gap:6px;margin-bottom:12px}
+.field label,.lbl{font:600 .72rem var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+input[type=text],input[type=password],input[type=search],select,textarea{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel2)}
+.seg button{border:0;background:none;padding:8px 14px;font-weight:600;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.err{color:var(--bad);font-size:.88rem;min-height:1.3em;margin:4px 0}
+.ok{color:var(--good)}
+.row{display:flex;gap:10px;align-items:center}
+.row.wrap-r{flex-wrap:wrap}
+.grow{flex:1;min-width:0}
+.switch{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.switch:last-child{border:0}
+.tog{width:44px;height:26px;border-radius:99px;background:var(--line);border:0;position:relative;flex:none}
+.tog::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--ink);transition:transform .15s}
+.tog[aria-pressed="true"]{background:var(--accent)}
+.tog[aria-pressed="true"]::after{transform:translateX(18px);background:var(--accent-ink)}
+
+/* auth */
+.auth{flex:1;display:grid;place-items:center;padding-block:32px}
+.card{background:color-mix(in srgb,var(--panel) 92%,transparent);border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:var(--shadow)}
+.authcard{width:min(420px,100%);text-align:center}
+.authcard form{text-align:left}
+.slogan{font:500 .95rem var(--f-mono);color:var(--accent);letter-spacing:.14em;text-transform:uppercase;margin:8px 0 18px}
+.authtabs{display:flex;margin-bottom:16px}
+.authtabs .seg{width:100%}
+.authtabs .seg button{flex:1}
+.hint{font-size:.82rem;color:var(--muted)}
+
+/* lobby */
+.lobby{padding-block:24px 8px;display:grid;gap:20px}
+.panels{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.panel{display:grid;gap:12px;align-content:start}
+.panel h2{font-size:1.2rem}
+.members{border:1px solid var(--line);border-radius:12px;background:var(--panel2);padding:6px;display:grid;gap:2px;max-height:210px;overflow:auto}
+.mem{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:8px}
+.mem .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tag{font:600 .65rem var(--f-mono);letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:99px;background:var(--accent-soft);color:var(--accent)}
+.tag.adm{background:var(--accent);color:var(--accent-ink)}
+.tag.bad{background:color-mix(in srgb,var(--bad) 18%,transparent);color:var(--bad)}
+.tag.good{background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good)}
+.status{width:9px;height:9px;border-radius:50%;background:var(--line);flex:none}
+.status.on{background:var(--good);box-shadow:0 0 8px var(--good)}
+.orline{display:flex;align-items:center;gap:12px;color:var(--muted);font:600 .75rem var(--f-mono)}
+.orline::before,.orline::after{content:"";height:1px;background:var(--line);flex:1}
+.slist{display:grid;gap:6px;max-height:260px;overflow:auto}
+.srv{display:flex;align-items:center;gap:10px;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--panel2)}
+.hero-z{display:grid;justify-items:center;gap:6px;padding-block:8px 0;text-align:center}
+.promptbar{display:flex;gap:8px;border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:6px;box-shadow:var(--shadow)}
+.promptbar input{border:0;background:none;outline:0!important;flex:1;min-width:0;padding:10px 12px}
+.promptbar .go{width:44px;border-radius:10px;border:0;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center}
+.promptbar .go svg{width:20px;height:20px}
+.foot{margin-top:auto;border-top:1px solid var(--line);padding-block:16px;font-size:.84rem;color:var(--muted)}
+.foot .wrap{display:flex;gap:10px 18px;flex-wrap:wrap;align-items:center}
+.foot .em{font-family:var(--f-mono);font-size:.78rem;color:var(--ink);user-select:all}
+.linkbtn{background:none;border:0;padding:0;color:var(--accent);font-weight:600;text-decoration:underline}
+.banner{background:var(--accent-soft);border-bottom:1px solid var(--line);padding:9px 16px;font-size:.9rem;display:flex;gap:12px;align-items:center;justify-content:center;text-align:center}
+
+/* workspace */
+.ws{flex:1;display:grid;grid-template-columns:260px minmax(0,1fr);gap:16px;padding-block:16px;min-height:0}
+.rail{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;align-content:start;min-width:0}
+.rail h3{overflow-wrap:anywhere}
+[hidden]{display:none!important}
+.rail .card{padding:14px}
+.rail h3{font-size:.95rem;margin-bottom:8px}
+.hist{display:grid;gap:8px;max-height:300px;overflow:auto}
+.hist div{font-size:.85rem;border-left:2px solid var(--accent);padding-left:8px}
+.hist small{display:block;color:var(--muted);font:.7rem var(--f-mono)}
+.stage{display:grid;grid-template-rows:auto minmax(380px,1fr) auto;gap:12px;min-width:0}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tools .hint{white-space:nowrap;text-align:right}
+.view{border:1px solid var(--line);border-radius:14px;background:var(--panel);overflow:hidden;display:grid;place-items:stretch;min-height:380px;position:relative}
+.view iframe{width:100%;height:100%;border:0;background:#fff;min-height:380px}
+.view.phone{place-items:center;background:var(--panel2)}
+.view.phone iframe{width:390px;max-width:100%;border-left:1px solid var(--line);border-right:1px solid var(--line)}
+.view textarea{height:100%;min-height:380px;border:0;border-radius:0;font:12.5px/1.55 var(--f-mono);resize:none}
+.building{position:absolute;inset:0;background:color-mix(in srgb,var(--bg) 78%,transparent);display:grid;place-items:center;text-align:center;gap:10px;z-index:3}
+.spin{width:34px;height:34px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp .8s linear infinite;margin:auto}
+@keyframes sp{to{transform:rotate(1turn)}}
+.empty{display:grid;place-items:center;text-align:center;padding:30px;gap:8px;color:var(--muted)}
+
+/* modal + toasts */
+.mback{position:fixed;inset:0;z-index:60;background:rgba(6,3,14,.62);display:grid;place-items:center;padding:16px;backdrop-filter:blur(3px)}
+.modal{width:min(760px,100%);max-height:calc(100% - 8px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+.modal.narrow{width:min(480px,100%)}
+.modal.wide{width:min(1040px,100%)}
+.mh{display:flex;align-items:center;gap:10px;padding:16px 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel);z-index:2}
+.mh h2{flex:1;font-size:1.15rem}
+.mb{padding:18px}
+.tabsm{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:16px}
+.tabsm .tab{border:1px solid var(--line)}
+#toasts{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));display:grid;gap:8px;z-index:80;width:min(440px,calc(100% - 32px))}
+.toast{background:var(--ink);color:var(--bg);padding:11px 14px;border-radius:10px;font-weight:500;box-shadow:var(--shadow)}
+.toast.bad{background:var(--bad);color:#fff}
+.tblw{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font:600 .68rem var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--panel2)}
+tr:last-child td{border:0}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px}
+.stat{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--panel2)}
+.stat b{display:block;font:700 1.7rem var(--f-display)}
+.stat span{font:600 .68rem var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.note{background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;padding:14px 16px;line-height:1.7}
+.note p{margin:0 0 10px}
+.note p:last-child{margin:0}
+.dated{font:600 .75rem var(--f-mono);color:var(--accent)}
+.banwrap{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;padding:10px;background:var(--panel2);border-radius:10px;margin:6px 0}
+
+/* profile, websites, admin extras */
+.avatar{background-repeat:no-repeat}
+.frame-ring{box-shadow:0 0 0 2px var(--panel),0 0 0 4px var(--accent)}
+.frame-sq{border-radius:10px}
+.frame-glitch{box-shadow:0 0 0 2px var(--panel),0 0 0 4px var(--accent);animation:fg 2.4s infinite steps(1)}
+@keyframes fg{0%,80%,100%{box-shadow:0 0 0 2px var(--panel),0 0 0 4px var(--accent)}84%{box-shadow:3px 0 0 2px var(--accent),-3px 0 0 4px var(--ink)}90%{box-shadow:-3px 0 0 2px var(--ink),3px 0 0 4px var(--accent)}}
+body.noglitch .frame-glitch{animation:none}
+.avatar.xl{width:84px;height:84px;font-size:2rem;border:4px solid var(--panel2)}
+.pcard{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--panel2)}
+.pbanner{height:92px}
+.pbody{padding:0 16px 16px}
+.pbody .avatar.xl{margin-top:-42px}
+.pbody h3{font-size:1.2rem;margin:8px 0 2px}
+.pgrid{display:grid;grid-template-columns:minmax(0,320px) minmax(0,1fr);gap:18px}
+.swatches{display:flex;gap:8px;flex-wrap:wrap}
+.sw{width:30px;height:30px;border-radius:50%;border:2px solid var(--line);padding:0}
+.sw[aria-pressed="true"]{outline:3px solid var(--accent);outline-offset:2px}
+.sw.bn{border-radius:8px;width:44px}
+input[type=color]{width:44px;height:30px;padding:0;border:1px solid var(--line);border-radius:8px;background:none}
+.sites{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.site{display:grid;gap:10px;align-content:start}
+.thumb{position:relative;aspect-ratio:16/10;overflow:hidden;border-radius:10px;border:1px solid var(--line);background:#fff}
+.thumb iframe{position:absolute;left:0;top:0;width:1280px;height:800px;border:0;transform-origin:0 0;pointer-events:none}
+.thumb .ph{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-size:.85rem;background:var(--panel2)}
+.site h3{font-size:1.02rem;overflow-wrap:anywhere}
+.site .row{flex-wrap:wrap}
+.bulk{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 10px;background:var(--accent-soft);border-radius:10px;margin-bottom:10px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.toolbar input[type=search]{flex:1;min-width:160px}
+.toolbar select{width:auto}
+.sect{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px;background:var(--panel2)}
+.sect h4{margin:0 0 10px;font:600 .72rem var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.log{display:grid;gap:6px;max-height:420px;overflow:auto}
+.log div{font-size:.88rem;padding:6px 10px;border-left:2px solid var(--accent);background:var(--panel2);border-radius:0 8px 8px 0}
+.log small{color:var(--muted);font-family:var(--f-mono)}
+.prevframe{width:100%;height:min(70vh,640px);border:1px solid var(--line);border-radius:10px;background:#fff}
+td .row{flex-wrap:nowrap}
+@media (max-width:820px){.pgrid{grid-template-columns:1fr}}
+
+/* live cursors */
+#cursors,#selfTag{position:fixed;left:0;top:0;pointer-events:none;z-index:95}
+.rc{position:fixed;left:0;top:0;transition:transform .09s linear}
+.rc svg{width:18px;height:18px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))}
+.nt{position:absolute;left:10px;top:20px;padding:2px 8px;border-radius:6px;font:600 11px/1.5 var(--f-mono);color:#fff;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.35)}
+#selfTag{display:none}
+#selfTag.on{display:block}
+#selfTag .nt{background:var(--accent);color:var(--accent-ink);left:0;top:0}
+
+@media (max-width:820px){
+  .panels{grid-template-columns:1fr}
+  .panels .panel[data-off="1"]{display:none}
+  .ws{grid-template-columns:1fr}
+  .tabs{margin-inline:0;width:100%}
+  .tab{flex:1}
+  .banwrap{grid-template-columns:1fr}
+  .welcome{order:3;flex-basis:100%}
+}
+@media (min-width:821px){.panels .panel[data-off="1"]{display:grid}}
+</style>
+<canvas id="bg" aria-hidden="true"></canvas>
+<div id="app"></div>
+<div id="cursors" aria-hidden="true"></div>
+<div id="selfTag" aria-hidden="true"></div>
+<div id="toasts" role="status" aria-live="polite"></div>
+<div id="modalRoot"></div>
+<script>
+const SHA_K=[],SHA_H=[];(function(){let n=2;while(SHA_K.length<64){let p=true;for(let i=2;i*i<=n;i++)if(n%i===0){p=false;break}if(p){if(SHA_H.length<8)SHA_H.push(Math.floor((Math.sqrt(n)%1)*4294967296));SHA_K.push(Math.floor((Math.cbrt(n)%1)*4294967296))}n++}})();
+function sha256hex(s){const b=new TextEncoder().encode(s),l=b.length,pad=new Uint8Array(((l+9+63)>>6)<<6);pad.set(b);pad[l]=0x80;const dv=new DataView(pad.buffer);dv.setUint32(pad.length-4,(l*8)>>>0);dv.setUint32(pad.length-8,Math.floor(l*8/4294967296));const h=SHA_H.slice(),w=new Uint32Array(64);for(let o=0;o<pad.length;o+=64){for(let i=0;i<16;i++)w[i]=dv.getUint32(o+i*4);for(let i=16;i<64;i++){const a=w[i-15],c=w[i-2];const s0=((a>>>7)|(a<<25))^((a>>>18)|(a<<14))^(a>>>3);const s1=((c>>>17)|(c<<15))^((c>>>19)|(c<<13))^(c>>>10);w[i]=(w[i-16]+s0+w[i-7]+s1)>>>0}let[a,c,d,e,f,g,hh,j]=h;for(let i=0;i<64;i++){const S1=((f>>>6)|(f<<26))^((f>>>11)|(f<<21))^((f>>>25)|(f<<7));const ch=(f&g)^(~f&hh);const t1=(j+S1+ch+SHA_K[i]+w[i])>>>0;const S0=((a>>>2)|(a<<30))^((a>>>13)|(a<<19))^((a>>>22)|(a<<10));const mj=(a&c)^(a&d)^(c&d);const t2=(S0+mj)>>>0;j=hh;hh=g;g=f;f=(e+t1)>>>0;e=d;d=c;c=a;a=(t1+t2)>>>0}h[0]=(h[0]+a)>>>0;h[1]=(h[1]+c)>>>0;h[2]=(h[2]+d)>>>0;h[3]=(h[3]+e)>>>0;h[4]=(h[4]+f)>>>0;h[5]=(h[5]+g)>>>0;h[6]=(h[6]+hh)>>>0;h[7]=(h[7]+j)>>>0}return h.map(x=>x.toString(16).padStart(8,'0')).join('')}
+function hashPw(pw,salt){let x=salt+':'+pw;for(let i=0;i<1500;i++)x=sha256hex(x+salt);return x}
+/* Offline builder: unlimited, no network. Used when no AI engine is reachable. */
+const OB=(()=>{
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const tc=s=>s.replace(/\b([a-z])/g,(m,c)=>c.toUpperCase());
+const COLORS={red:'#ef4444',crimson:'#dc2626',orange:'#f97316',yellow:'#eab308',gold:'#d4a017',green:'#22c55e',lime:'#84cc16',teal:'#14b8a6',cyan:'#06b6d4',blue:'#3b82f6',navy:'#2563eb',purple:'#8b5cf6',violet:'#8b5cf6',pink:'#ec4899',magenta:'#d946ef',brown:'#b45309'};
+const KIND_RE=[['restaurant',/restaurant|cafe|café|coffee|pizza|burger|bakery|food|menu|sushi|ice cream|diner|tacos?/],['shop',/shop|store|sell|merch|products?|e-?commerce|clothes|shoes|sneakers|blind bag|toys?/],['game',/game|arcade|gaming|esports|minecraft|roblox|puzzle/],['music',/music|band|song|album|\bdj\b|concert|singer/],['fitness',/gym|fitness|workout|yoga|sports?|training|football|cricket/],['event',/event|wedding|party|birthday|conference|invitation|festival/],['school',/school|class|course|learn|tutor|education|study|club/],['blog',/blog|news|article|magazine|journal|diary/],['portfolio',/portfolio|resume|\bcv\b|personal|developer|designer|artist|about me|my work|photograph/],['app',/\bapp\b|saas|startup|software|\bai\b|tool|dashboard|platform|tech/]];
+const FONTS={tech:['Chakra Petch','IBM Plex Sans'],elegant:['Playfair Display','Lato'],playful:['Fredoka','Nunito'],bold:['Bebas Neue','Barlow'],editorial:['DM Serif Display','DM Sans']};
+const KIND={
+restaurant:{font:'elegant',name:'Fresh Bites',tag:'Made fresh. Served warm.',sub:'Come hungry, leave happy. A small kitchen with big flavour.',cta:'Reserve a table',feats:[['Made fresh','Prepared the morning you eat it.'],['Local ingredients','Bought from farms near the kitchen.'],['Open late','Kitchen runs until midnight on weekends.']],sec:'menu'},
+shop:{font:'playful',name:'Corner Shop',tag:'Small things you will love.',sub:'Hand picked products, quick delivery and easy returns.',cta:'Shop now',feats:[['Free delivery','On every order over $30.'],['Easy returns','Changed your mind? Send it back in 30 days.'],['Made with care','Every item is checked before it ships.']],sec:'products'},
+game:{font:'bold',name:'Pixel Arena',tag:'Play. Compete. Repeat.',sub:'Quick matches, a live leaderboard and a game you can try right here.',cta:'Play now',feats:[['Instant play','No download, open and start.'],['Live leaderboard','See who is on top this week.'],['Play with friends','Invite a friend with one link.']],sec:'game'},
+music:{font:'bold',name:'Night Signal',tag:'Turn it up.',sub:'New songs, live shows and everything in between.',cta:'Listen now',feats:[['New album','Out now on every platform.'],['Live shows','Tickets for the next tour are on sale.'],['Behind the scenes','Studio sessions and stories.']],sec:'tracks'},
+fitness:{font:'bold',name:'Peak Gym',tag:'Stronger every week.',sub:'Coaching, classes and plans that fit your schedule.',cta:'Start free week',feats:[['Expert coaches','Real feedback on every session.'],['Flexible classes','Morning, evening and weekend.'],['Track progress','Know exactly how far you came.']],sec:'pricing'},
+event:{font:'elegant',name:'The Big Day',tag:'You are invited.',sub:'Save the date and tell us you are coming.',cta:'RSVP now',feats:[['Where','A bright hall with room for everyone.'],['What to wear','Come as you are, dress for fun.'],['Food and music','Dinner at seven, dancing after.']],sec:'timeline'},
+school:{font:'playful',name:'Bright Minds',tag:'Learn something new today.',sub:'Friendly teachers, small groups and lessons that stick.',cta:'Join a class',feats:[['Small groups','Everyone gets time with the teacher.'],['Learn at your pace','Go faster or slower when you need.'],['Fun projects','Build something real every week.']],sec:'courses'},
+blog:{font:'editorial',name:'The Daily Note',tag:'Stories worth reading.',sub:'Short, honest writing about things we find interesting.',cta:'Read latest',feats:[['Fresh posts','New writing every week.'],['Easy to read','Short pieces you can finish in minutes.'],['Join the list','Get new posts in your inbox.']],sec:'posts'},
+portfolio:{font:'editorial',name:'My Portfolio',tag:'I build things people enjoy using.',sub:'A selection of recent work, what I am good at and how to reach me.',cta:'See my work',feats:[['Design','Clear layouts that feel good to use.'],['Code','Fast, tidy and easy to maintain.'],['Ideas','From first sketch to finished launch.']],sec:'projects'},
+app:{font:'tech',name:'Nova',tag:'Do more with less effort.',sub:'A simple tool that handles the boring parts so you can focus on what matters.',cta:'Get started',feats:[['Fast setup','Be up and running in two minutes.'],['Works everywhere','Phone, tablet and computer.'],['Private by default','Your data stays yours.']],sec:'pricing'},
+landing:{font:'tech',name:'Your Website',tag:'Something great starts here.',sub:'A clean page that explains what you do and makes it easy to get in touch.',cta:'Get started',feats:[['Simple','Clear words and a clean layout.'],['Fast','Loads quickly on any device.'],['Yours','Easy to change and make your own.']],sec:'pricing'}};
+function menuFor(l){
+ if(/pizza/.test(l))return[['Margherita','Tomato, mozzarella, basil','9'],['Pepperoni','Spicy pepperoni, extra cheese','11'],['Veggie Garden','Peppers, olives, mushrooms','10'],['Garlic Knots','Six knots with herb butter','5'],['Tiramisu','Coffee, cocoa, mascarpone','6'],['Lemonade','Fresh squeezed','3']];
+ if(/coffee|cafe|café|bakery/.test(l))return[['Flat White','Double shot, silky milk','4'],['Cold Brew','Steeped for 18 hours','4'],['Butter Croissant','Baked every morning','3'],['Cinnamon Roll','Warm with cream cheese icing','4'],['Avocado Toast','Sourdough, lime, chilli','8'],['Hot Chocolate','Dark, thick, with marshmallows','4']];
+ if(/burger/.test(l))return[['Classic Burger','Beef, cheddar, pickles','9'],['Crispy Chicken','Buttermilk fried, slaw','9'],['Bean Burger','Smoked black bean patty','8'],['Loaded Fries','Cheese sauce, jalapeño','5'],['Milkshake','Vanilla, chocolate or strawberry','5'],['Onion Rings','Beer battered','4']];
+ return[['House Special','Chef\'s pick of the day','12'],['Garden Bowl','Seasonal vegetables, grains, herbs','10'],['Crispy Chicken','Served with warm bread','11'],['Creamy Pasta','Slow cooked sauce, parmesan','10'],['Chocolate Pot','Dark chocolate, sea salt','6'],['Fresh Lemonade','Squeezed to order','3']]}
+const PRODUCTS=[['Starter Pack','Everything you need to begin','12'],['Mystery Bag','A surprise worth the wait','8'],['Deluxe Set','Our most loved bundle','24'],['Limited Edition','Only a few left','18'],['Gift Box','Wrapped and ready to give','20'],['Daily Pick','Changes every day','6']];
+const TRACKS=[['Midnight Static','3:42'],['Glass Rooms','4:05'],['Run It Back','2:58'],['Paper Skies','3:31'],['Afterglow','4:20'],['Signal Lost','3:12']];
+const POSTS=[['Why small websites win','Oct 12','A short case for building things that do one job well.'],['What I learned this month','Oct 5','Notes on mistakes, fixes and tiny victories.'],['A better way to plan your week','Sep 28','Three steps that take ten minutes.'],['Things I am reading','Sep 20','A list with one line on each.']];
+const PROJECTS=[['Lumen','A weather app with a calm design','App'],['Orbit','A tiny habit tracker','Web'],['Atlas','A map of local cafés','Map'],['Pulse','A dashboard for a school club','Data']];
+const COURSES=[['Maths Boost','Grades 6 to 9','Mon, Wed'],['Creative Writing','All ages','Tue'],['Coding Basics','Beginners','Thu, Sat'],['Science Lab','Hands on experiments','Fri']];
+const TIMES=[['4:00 PM','Doors open'],['5:00 PM','Welcome and photos'],['6:30 PM','Dinner is served'],['8:00 PM','Music and dancing'],['10:30 PM','Last song']];
+const TIERS=[['Starter','Free',['One project','Community help','Basic features']],['Plus','$9',['Unlimited projects','Priority help','Everything in Starter']],['Team','$29',['Shared workspace','Admin controls','Everything in Plus']]];
+function parse(text){
+ const low=text.toLowerCase();let kind='landing';for(const[k,re]of KIND_RE)if(re.test(low)){kind=k;break}
+ let title=null,m=text.match(/["“]([^"”]{2,40})["”]/)||text.match(/\b(?:[Cc]alled|[Nn]amed|[Tt]itled)\s+([A-Z0-9][\w'&-]*(?:\s+[A-Z0-9][\w'&-]*){0,3})/);
+ if(m)title=m[1].trim();
+ if(!title){m=text.match(/\b(?:a|an|the|my|our)\s+([a-z0-9' &-]{2,40}?)\s+(?:website|web site|site|web ?page|page|app)\b/i);if(m){title=m[1].replace(/\b(cool|simple|modern|dark|light|nice|awesome|great|new|good|best|fun|beautiful|amazing|really|very|bright|clean|minimal|red|blue|green|purple|pink|orange|yellow|teal|cyan)\b/gi,'').replace(/\s+/g,' ').trim()}}
+ if(!title||title.length<2||(!/\s/.test(title)&&KIND_RE.some(([k,re])=>re.test(title.toLowerCase()))))title=KIND[kind].name;else title=tc(title).slice(0,32);
+ let color=null;for(const c in COLORS)if(new RegExp('\\b'+c+'\\b').test(low)){color=COLORS[c];break}
+ const light=/\b(light|bright|clean|minimal|pastel|soft|white)\b/.test(low)&&!/\bdark\b/.test(low);
+ let extras=[];const ex=text.match(/\b(?:with|including|includes|has|having|featuring|plus)\s+([^.]+)$/i);
+ if(ex)extras=ex[1].split(/,|\band\b|&/).map(s=>s.replace(/^\s*(a|an|the|some|my)\s+/i,'').trim()).filter(s=>s.length>1&&s.length<42).slice(0,6);
+ return{kind,title,color:color||'#8b5cf6',light,extras,low};
+}
+function render(text){
+ const b=parse(text),K=KIND[b.kind],[fd,fb]=FONTS[K.font],acc=b.color;
+ const bg=b.light?'#fafaf7':'#0c0a14',panel=b.light?'#ffffff':'#151122',ink=b.light?'#15121f':'#f3effb',mut=b.light?'#5f5a70':'#a8a0bd',line=b.light?'#e4e0ee':'#2a2340';
+ const feats=(b.extras.length?b.extras.map(e=>[tc(e),'Everything about '+e.toLowerCase()+', laid out clearly and easy to find.']):K.feats);
+ const id=s=>s.toLowerCase().replace(/[^a-z0-9]+/g,'-');
+ let section='',navLinks=['Features'];
+ const head=(t,s)=>`<div class="head"><h2>${esc(t)}</h2>${s?`<p>${esc(s)}</p>`:''}</div>`;
+ if(K.sec==='menu'){navLinks.push('Menu');section=`<section id="menu">${head('The menu','Simple food, done properly.')}<div class="list">${menuFor(b.low).map(r=>`<div class="row"><div><b>${esc(r[0])}</b><span>${esc(r[1])}</span></div><em>$${r[2]}</em></div>`).join('')}</div></section>`}
+ else if(K.sec==='products'){navLinks.push('Products');section=`<section id="products">${head('Popular right now','Add anything to your cart.')}<div class="grid">${PRODUCTS.map((p,i)=>`<div class="card prod"><div class="tile" style="--h:${i*47}"></div><b>${esc(p[0])}</b><span>${esc(p[1])}</span><div class="pr"><em>$${p[2]}</em><button class="btn small" onclick="addCart()">Add to cart</button></div></div>`).join('')}</div></section>`}
+ else if(K.sec==='game'){navLinks.push('Play');section=`<section id="play">${head('Try it now','Hit the glowing square as fast as you can. You have 15 seconds.')}<div class="gamebox"><div class="score">Score <b id="sc">0</b> · Time <b id="tm">15</b></div><div class="cells" id="cells">${'<button class="cell" aria-label="cell"></button>'.repeat(9)}</div><button class="btn" id="go">Start</button></div><div class="list" style="margin-top:24px">${[['NovaKid',42],['Pixelfox',38],['Glitchy',35],['You','—']].map((r,i)=>`<div class="row"><div><b>#${i+1} ${r[0]}</b></div><em>${r[1]}</em></div>`).join('')}</div></section>`}
+ else if(K.sec==='tracks'){navLinks.push('Tracks');section=`<section id="tracks">${head('Latest release','Press play on your favourite.')}<div class="list">${TRACKS.map((t,i)=>`<div class="row"><div><b>${i+1}. ${esc(t[0])}</b></div><em>${t[1]}</em></div>`).join('')}</div></section>`}
+ else if(K.sec==='posts'){navLinks.push('Posts');section=`<section id="posts">${head('Latest posts')}<div class="list">${POSTS.map(p=>`<div class="row"><div><b>${esc(p[0])}</b><span>${esc(p[2])}</span></div><em>${p[1]}</em></div>`).join('')}</div></section>`}
+ else if(K.sec==='projects'){navLinks.push('Work');section=`<section id="work">${head('Selected work')}<div class="grid">${PROJECTS.map((p,i)=>`<div class="card"><div class="tile" style="--h:${i*60+20}"></div><b>${esc(p[0])}</b><span>${esc(p[1])}</span><em class="chip">${p[2]}</em></div>`).join('')}</div></section>`}
+ else if(K.sec==='courses'){navLinks.push('Classes');section=`<section id="classes">${head('Classes this term')}<div class="grid">${COURSES.map(c=>`<div class="card"><b>${esc(c[0])}</b><span>${esc(c[1])}</span><em class="chip">${esc(c[2])}</em></div>`).join('')}</div></section>`}
+ else if(K.sec==='timeline'){navLinks.push('Schedule');section=`<section id="schedule">${head('The plan for the day')}<div class="list">${TIMES.map(t=>`<div class="row"><div><b>${t[1]}</b></div><em>${t[0]}</em></div>`).join('')}</div></section>`}
+ else{navLinks.push('Pricing');section=`<section id="pricing">${head('Pricing','Pick a plan. Change it any time.')}<div class="grid">${TIERS.map((t,i)=>`<div class="card ${i===1?'hl':''}"><b>${t[0]}</b><div class="price">${t[1]}<small>${t[1]==='Free'?'':'/month'}</small></div><ul>${t[2].map(x=>`<li>${x}</li>`).join('')}</ul><a class="btn small" href="#contact">Choose ${t[0]}</a></div>`).join('')}</div></section>`}
+ navLinks.push('Contact');
+ const cartBtn=K.sec==='products'?`<span class="cart">Cart <b id="cart">0</b></span>`:'';
+ const css=`*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:${bg};color:${ink};font:16px/1.6 '${fb}',system-ui,sans-serif}h1,h2,h3{font-family:'${fd}',system-ui,sans-serif;line-height:1.1;margin:0}a{color:inherit}.w{width:min(1060px,100%);margin:auto;padding-inline:20px}nav{position:sticky;top:0;z-index:5;background:${bg}e6;backdrop-filter:blur(8px);border-bottom:1px solid ${line}}nav .w{display:flex;align-items:center;gap:20px;min-height:60px;flex-wrap:wrap}nav b{font-family:'${fd}';font-size:1.3rem;margin-right:auto}nav a{text-decoration:none;color:${mut};font-size:.95rem}nav a:hover{color:${acc}}.cart{color:${mut}}.hero{padding:88px 0 72px;background:radial-gradient(60% 80% at 80% 0,${acc}33,transparent)}.hero h1{font-size:clamp(2.6rem,7vw,5rem);max-width:14ch;text-wrap:balance}.hero p{max-width:52ch;color:${mut};font-size:1.15rem;margin:18px 0 28px}.btn{display:inline-block;background:${acc};color:#fff;border:0;border-radius:10px;padding:12px 22px;font:600 1rem '${fb}';cursor:pointer;text-decoration:none}.btn.small{padding:8px 14px;font-size:.9rem}.btn.ghost{background:transparent;border:1px solid ${line};color:${ink};margin-left:8px}section{padding:64px 0;border-top:1px solid ${line}}.head{margin-bottom:28px}.head h2{font-size:clamp(1.8rem,4vw,2.6rem)}.head p{color:${mut};margin:8px 0 0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}.card{background:${panel};border:1px solid ${line};border-radius:14px;padding:22px;display:flex;flex-direction:column;gap:8px}.card span{color:${mut}}.card.hl{border-color:${acc};box-shadow:0 0 0 1px ${acc}}.tile{aspect-ratio:4/3;border-radius:10px;background:linear-gradient(135deg,hsl(var(--h) 80% 60%),${acc});margin-bottom:6px}.pr{display:flex;align-items:center;justify-content:space-between;margin-top:6px}.pr em,.price{font-style:normal;font-weight:700}.price{font-size:2rem}.price small{font-size:.9rem;color:${mut};font-weight:400}ul{padding-left:18px;margin:6px 0 12px;color:${mut}}.chip{align-self:flex-start;font-style:normal;font-size:.8rem;border:1px solid ${line};padding:2px 10px;border-radius:99px;color:${mut}}.list{display:grid;gap:0;border:1px solid ${line};border-radius:14px;overflow:hidden;background:${panel}}.row{display:flex;justify-content:space-between;gap:16px;padding:16px 20px;border-bottom:1px solid ${line}}.row:last-child{border:0}.row span{display:block;color:${mut};font-size:.92rem}.row em{font-style:normal;font-weight:700;color:${acc};white-space:nowrap}.fgrid .card b{font-family:'${fd}';font-size:1.25rem}.gamebox{display:grid;gap:16px;justify-items:center}.cells{display:grid;grid-template-columns:repeat(3,84px);gap:10px}.cell{height:84px;border-radius:12px;border:1px solid ${line};background:${panel};cursor:pointer}.cell.on{background:${acc};box-shadow:0 0 24px ${acc}}form{display:grid;gap:12px;max-width:520px}input,textarea{font:inherit;padding:12px 14px;border-radius:10px;border:1px solid ${line};background:${panel};color:${ink};width:100%}footer{padding:32px 0;border-top:1px solid ${line};color:${mut};font-size:.9rem}`;
+ const js=`function addCart(){var c=document.getElementById('cart');c.textContent=+c.textContent+1}
+var f=document.getElementById('cf');f.addEventListener('submit',function(e){e.preventDefault();f.innerHTML='<p><b>Thanks!</b> We got your message and will reply soon.</p>'});
+var go=document.getElementById('go');if(go){var cells=[].slice.call(document.querySelectorAll('.cell')),sc=0,tl=15,run=false,cur=-1,tm;function pick(){if(cur>-1)cells[cur].classList.remove('on');cur=Math.floor(Math.random()*9);cells[cur].classList.add('on')}cells.forEach(function(c,i){c.onclick=function(){if(run&&i===cur){sc++;document.getElementById('sc').textContent=sc;pick()}}});go.onclick=function(){if(run)return;sc=0;tl=15;run=true;document.getElementById('sc').textContent=0;pick();tm=setInterval(function(){tl--;document.getElementById('tm').textContent=tl;if(tl<=0){clearInterval(tm);run=false;cells[cur].classList.remove('on');go.textContent='Play again'}},1000)}}`;
+ return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(b.title)}</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=${fd.replace(/ /g,'+')}&family=${fb.replace(/ /g,'+')}:wght@400;600;700&display=swap"><style>${css}</style></head><body><nav><div class="w"><b>${esc(b.title)}</b>${navLinks.map(n=>`<a href="#${n.toLowerCase()}">${n}</a>`).join('')}${cartBtn}</div></nav><header class="hero"><div class="w"><h1>${esc(K.tag)}</h1><p>${esc(K.sub)}</p><a class="btn" href="#contact">${esc(K.cta)}</a><a class="btn ghost" href="#features">Learn more</a></div></header><section id="features"><div class="w">${head('Why '+b.title)}<div class="grid fgrid">${feats.map(f=>`<div class="card"><b>${esc(f[0])}</b><span>${esc(f[1])}</span></div>`).join('')}</div></div></section>${section.replace(/^<section([^>]*)>/,'<section$1><div class="w">').replace(/<\/section>$/,'</div></section>')}<section id="contact"><div class="w">${head('Get in touch','Tell us a little and we will reply.')}<form id="cf"><input placeholder="Your name" required aria-label="Name"><input type="email" placeholder="Email" required aria-label="Email"><textarea rows="4" placeholder="Message" aria-label="Message"></textarea><button class="btn" type="submit">Send</button></form></div></section><footer><div class="w">© ${new Date().getFullYear()} ${esc(b.title)}. Built with Zendex.</div></footer><script>${js}<\/script></body></html>`;
+}
+return{render,parse};
+})();
+'use strict';
+/* ===== utils ===== */
+const $=(s,r=document)=>r.querySelector(s);
+{const _rc=Element.prototype.replaceChildren;Element.prototype.replaceChildren=function(...n){return _rc.apply(this,n.flat(9).filter(x=>x!=null&&x!==false))}}
+function h(tag,props,...kids){const el=document.createElement(tag);for(const k in(props||{})){const v=props[k];if(v==null||v===false)continue;if(k==='class')el.className=v;else if(k==='html')el.innerHTML=v;else if(k.startsWith('on'))el.addEventListener(k.slice(2),v);else if(k==='value')el.value=v;else el.setAttribute(k,v===true?'':v)}for(const kid of kids.flat(9)){if(kid==null||kid===false)continue;el.append(kid.nodeType?kid:document.createTextNode(String(kid)))}return el}
+const withTimeout=(p,ms)=>Promise.race([Promise.resolve(p),new Promise(r=>setTimeout(()=>r(null),ms))]);
+const LS={mem:{},get(k){try{const v=localStorage.getItem(k);return v==null?this.mem[k]??null:v}catch{return this.mem[k]??null}},set(k,v){this.mem[k]=v;try{localStorage.setItem(k,v)}catch{}},del(k){delete this.mem[k];try{localStorage.removeItem(k)}catch{}}};
+const rnd=(n,al='abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789')=>Array.from(crypto.getRandomValues(new Uint8Array(n)),b=>al[b%al.length]).join('');
+const newCode=()=>rnd(6,'ABCDEFGHJKLMNPQRSTUVWXYZ23456789');
+const hue=s=>{let x=0;for(const c of s)x=(x*31+c.charCodeAt(0))>>>0;return x%360};
+const colorOf=name=>`hsl(${hue(name)} 70% 42%)`;
+const ago=t=>{const s=Math.max(1,Math.round((Date.now()-t)/1000));return s<60?s+'s ago':s<3600?Math.round(s/60)+'m ago':s<86400?Math.round(s/3600)+'h ago':Math.round(s/86400)+'d ago'};
+const pad=n=>String(n).padStart(2,'0');
+const fmtDT=d=>`${pad(d.getDate())}/${pad(d.getMonth()+1)}/${pad(d.getFullYear()%100)}`;
+const fmtT=d=>`${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+const copyText=async t=>{try{await navigator.clipboard.writeText(t);toast('Copied');return true}catch{toast('Select the text and copy it by hand','bad');return false}};
+function toast(msg,kind){const t=h('div',{class:'toast '+(kind||'')},msg);$('#toasts').append(t);setTimeout(()=>t.remove(),2800);const all=$('#toasts').children;while(all.length>3)all[0].remove()}
+
+/* ===== constants ===== */
+const ADMINS=[{id:'aaryan_takiar',name:'Aaryan Takiar'},{id:'kahaan_agarwal',name:'Kahaan Agarwal'},{id:'aarna_takiar',name:'Aarna Takiar'}];
+const ADMIN_SEED={"aaryan_takiar":{"salt":"q7Lm2xKd","hash":"81eee6a8e35dbe6374c363ffc887afb12ccddb5c9d01806225c8512dd0270524"},"kahaan_agarwal":{"salt":"Zr9wB4pT","hash":"88db2d8791f96366a031bb81e2b5b248e418118790c3fe0f8b38406e3bb8b638"},"aarna_takiar":{"salt":"h3NcV8sY","hash":"0a9802ed57e7411bcb137800f4c5d31c449f7052ed736758154da3ba21a69a0b"}};
+const MAX_SESSIONS=3,MAX_MEMBERS=12,VERSION='V-1.0.0';
+const isAdminId=id=>ADMINS.some(a=>a.id===id);
+const cleanName=n=>String(n||'').replace(/\s+/g,' ').trim();
+const nameId=n=>cleanName(n).toLowerCase().replace(/[ _]+/g,'_');
+function validName(n){n=cleanName(n);if(n.length<3||n.length>20)return'Username must be 3 to 20 characters.';if(!/^[A-Za-z0-9 ._-]+$/.test(n))return'Use letters, numbers, spaces, dot, dash or underscore.';if(!/[A-Za-z0-9]/.test(n))return'Username needs at least one letter or number.';return''}
+const isBanned=a=>!!(a&&a.banned&&(!a.until||a.until>Date.now()));
+
+/* ===== data layer: shared database when available, device storage otherwise ===== */
+function cloudBE(db){const HOLDER=rnd(10);return{
+  async get(p){const s=await db.doc(p).get();return s.exists?{...s.data()}:null},
+  async set(p,d){await db.doc(p).set(d)},
+  async update(p,d){await db.doc(p).update(d)},
+  async del(p){await db.doc(p).delete()},
+  async claim(p,d){const ref=db.doc(p);const r=await ref.acquire({holder:HOLDER,ttlMs:5000});if(!r.acquired)return false;const s=await ref.get();if(s.exists&&s.data()&&s.data()._ok)return false;await ref.set({...d,_ok:1});return true},
+  watchDoc(p,cb){return db.doc(p).onSnapshot(s=>cb(s.exists?{...s.data()}:null),e=>console.warn('watch',p,e))},
+  watchCol(c,cb){return db.collection(c).onSnapshot(q=>cb(q.docs.map(x=>({...x.data(),_id:x.id}))),e=>console.warn('watch',c,e))}}}
+function localBE(){const KEY='zendex.local.v1';let docs={};try{docs=JSON.parse(LS.get(KEY)||'{}')}catch{}const subs=new Set();
+  const save=()=>LS.set(KEY,JSON.stringify(docs));const fire=()=>subs.forEach(f=>f());
+  const colList=c=>Object.keys(docs).filter(k=>k.startsWith(c+'/')&&!k.slice(c.length+1).includes('/')).sort().map(k=>({...docs[k],_id:k.slice(c.length+1)}));
+  window.addEventListener('storage',e=>{if(e.key===KEY){try{docs=JSON.parse(e.newValue||'{}')}catch{}fire()}});
+  return{
+  async get(p){return docs[p]?{...docs[p]}:null},
+  async set(p,d){docs[p]=JSON.parse(JSON.stringify(d));save();fire()},
+  async update(p,d){if(!docs[p])throw{code:'invalid_argument'};docs[p]={...docs[p],...JSON.parse(JSON.stringify(d))};save();fire()},
+  async del(p){delete docs[p];save();fire()},
+  async claim(p,d){if(docs[p])return false;docs[p]={...d,_ok:1};save();fire();return true},
+  watchDoc(p,cb){const f=()=>cb(docs[p]?{...docs[p]}:null);subs.add(f);setTimeout(f,0);return()=>subs.delete(f)},
+  watchCol(c,cb){const f=()=>cb(colList(c));subs.add(f);setTimeout(f,0);return()=>subs.delete(f)}}}
+const D={mode:'local',be:null,ws:[],
+  async init(){const db=window.claude&&window.claude.use?await withTimeout(window.claude.use('db').catch(()=>null),4000):null;
+    if(db&&LS.get('zendex.forceLocal')!=='1'){try{await db.collection('accounts').limit(1).get();this.be=cloudBE(db);this.mode='cloud';return}catch(e){console.warn('db unavailable',e)}}
+    this.be=localBE();this.mode='local'},
+  async _w(fn){try{return await fn(this.be)}catch(e){if(this.mode==='cloud'&&e&&['invalid_argument','not_granted','revoked','capability_disabled'].includes(e.code)){await this.demote();return fn(this.be)}throw e}},
+  async demote(){this.ws.forEach(w=>w.un&&w.un());this.be=localBE();this.mode='local';this.ws.forEach(w=>{w.un=this.be[w.k](w.p,w.cb)});await seedAdmins();document.dispatchEvent(new Event('zx-mode'));toast('This view cannot write shared data, so Zendex switched to this device only.','bad')},
+  get:p=>D.be.get(p),set:(p,d)=>D._w(b=>b.set(p,d)),update:(p,d)=>D._w(b=>b.update(p,d)),del:p=>D._w(b=>b.del(p)),claim:(p,d)=>D._w(b=>b.claim(p,d)),
+  watch(k,p,cb){const w={k,p,cb,un:this.be[k](p,cb)};this.ws.push(w);return()=>{w.un&&w.un();this.ws=this.ws.filter(x=>x!==w)}},
+  watchDoc(p,cb){return this.watch('watchDoc',p,cb)},watchCol(p,cb){return this.watch('watchCol',p,cb)}};
+async function seedAdmins(){for(const a of ADMINS){try{if(!await D.be.get('accounts/'+a.id)){await D.be.set('creds/'+a.id,ADMIN_SEED[a.id]);await D.be.set('accounts/'+a.id,{_ok:1,id:a.id,name:a.name,role:'admin',created:Date.now(),banned:false})}}catch(e){console.warn('seed',e)}}}
+
+/* ===== state ===== */
+const S={accounts:{},friendships:[],servers:{},announce:null,sessions:[],active:-1,view:'auth',prefs:{},server:null,site:null,peers:[],presence:null,localSrv:{},settings:{signups:true,building:true,maintenance:false,maintMsg:''},audit:[]};
+const meId=()=>S.sessions[S.active]?.id||null;
+S.cache={};
+const me=()=>S.accounts[meId()]||S.cache[meId()]||null;
+const isAdmin=()=>!!meId()&&isAdminId(meId());
+const nameOf=id=>S.accounts[id]?.name||id;
+const DEF_PREFS={theme:'dark',fx:true,glitch:true,ownTag:true,engine:'auto'};
+function loadPrefs(){try{S.prefs={...DEF_PREFS,...JSON.parse(LS.get('zendex.prefs')||'{}')}}catch{S.prefs={...DEF_PREFS}}}
+function savePrefs(){LS.set('zendex.prefs',JSON.stringify(S.prefs))}
+function applyPrefs(){const r=document.documentElement;if(S.prefs.theme==='system')r.removeAttribute('data-theme');else r.setAttribute('data-theme',S.prefs.theme);document.body.classList.toggle('noglitch',!S.prefs.glitch);BG.refresh()}
+function loadSessions(){try{const j=JSON.parse(LS.get('zendex.sessions')||'{}');S.sessions=(j.list||[]).slice(0,MAX_SESSIONS);S.active=Math.min(j.active??0,S.sessions.length-1)}catch{S.sessions=[];S.active=-1}if(!S.sessions.length)S.active=-1}
+function saveSessions(){LS.set('zendex.sessions',JSON.stringify({list:S.sessions,active:S.active}))}
+
+/* ===== auth ===== */
+async function signUp(name,pw){if(S.settings.signups===false)throw new Error('Sign-ups are closed right now. Ask an admin.');const e=validName(name);if(e)throw new Error(e);if(pw.length<6)throw new Error('Password must be at least 6 characters.');
+  const id=nameId(name);if(isAdminId(id))throw new Error('That name is already taken.');
+  const salt=rnd(8);const ok=await D.claim('accounts/'+id,{id,name:cleanName(name),role:'user',created:Date.now(),banned:false});
+  if(!ok)throw new Error('That name is already taken.');await D.set('creds/'+id,{salt,hash:hashPw(pw,salt)});return await D.get('accounts/'+id)}
+async function logIn(name,pw){const id=nameId(name);const acc=id&&await D.get('accounts/'+id);const cr=acc&&await D.get('creds/'+id);
+  if(!acc||!cr||hashPw(pw,cr.salt)!==cr.hash)throw new Error('Wrong name or password.');
+  if(isBanned(acc))throw new Error(banText(acc));return acc}
+const banText=a=>`This account is ${a.until?'banned until '+new Date(a.until).toLocaleString():'permanently banned'}.${a.reason?' Reason: '+a.reason:''}`;
+const colorFor=name=>{const a=S.accounts[nameId(name)]||S.cache[nameId(name)];return a&&/^#[0-9a-fA-F]{6}$/.test(a.pcolor||'')?a.pcolor:colorOf(name)};
+function addSession(acc){const i=S.sessions.findIndex(s=>s.id===acc.id);if(i>=0){S.active=i}else{if(S.sessions.length>=MAX_SESSIONS)throw new Error('You can keep up to 3 accounts signed in.');S.sessions.push({id:acc.id,name:acc.name,since:Date.now()});S.active=S.sessions.length-1}saveSessions()}
+function dropSession(i){S.sessions.splice(i,1);if(!S.sessions.length)S.active=-1;else if(S.active>=S.sessions.length||i<S.active)S.active=Math.max(0,Math.min(S.active-(i<S.active?1:0),S.sessions.length-1));saveSessions()}
+
+/* ===== animated tech background ===== */
+const BG={cv:null,cx:null,cols:[],w:0,h:0,raf:0,rgb:[9,6,15],rain:[155,107,255],last:0,
+  hex(s){s=s.trim().replace('#','');if(s.length===3)s=s.replace(/./g,'$&$&');return[0,2,4].map(i=>parseInt(s.substr(i,2),16)||0)},
+  init(){this.cv=$('#bg');this.cx=this.cv.getContext('2d');addEventListener('resize',()=>this.resize());this.resize();this.refresh()},
+  resize(){const d=Math.min(devicePixelRatio||1,2);this.w=innerWidth;this.h=innerHeight;this.cv.width=this.w*d;this.cv.height=this.h*d;this.cx.setTransform(d,0,0,d,0,0);const n=Math.ceil(this.w/18);this.cols=Array.from({length:n},()=>({y:Math.random()*this.h,s:.4+Math.random()*1.1,t:Math.random()}));this.grid()},
+  refresh(){const cs=getComputedStyle(document.documentElement);this.rgb=this.hex(cs.getPropertyValue('--bg')||'#09060f');this.rain=this.hex(cs.getPropertyValue('--rain')||'#9b6bff');cancelAnimationFrame(this.raf);this.grid();if(S.prefs.fx&&!matchMedia('(prefers-reduced-motion:reduce)').matches)this.raf=requestAnimationFrame(t=>this.tick(t))},
+  grid(){const c=this.cx,[r,g,b]=this.rgb;c.fillStyle=`rgb(${r},${g},${b})`;c.fillRect(0,0,this.w,this.h);c.strokeStyle=`rgba(${this.rain.join(',')},.07)`;c.lineWidth=1;c.beginPath();for(let x=0;x<this.w;x+=48){c.moveTo(x+.5,0);c.lineTo(x+.5,this.h)}for(let y=0;y<this.h;y+=48){c.moveTo(0,y+.5);c.lineTo(this.w,y+.5)}c.stroke()},
+  tick(t){if(t-this.last>50){this.last=t;const c=this.cx,[r,g,b]=this.rgb;c.fillStyle=`rgba(${r},${g},${b},.14)`;c.fillRect(0,0,this.w,this.h);c.font='14px JetBrains Mono, monospace';const gl='01{}</>;=#$%&*+';this.cols.forEach((o,i)=>{o.y+=o.s*9;if(o.y>this.h+40||o.t>.998){o.y=-20;o.s=.4+Math.random()*1.1}o.t=Math.random();const ch=gl[(Math.random()*gl.length)|0];c.fillStyle=`rgba(${this.rain.join(',')},${.22+o.s*.2})`;c.fillText(ch,i*18,o.y)})}this.raf=requestAnimationFrame(x=>this.tick(x))}};
+
+/* ===== presence / cursors ===== */
+const P={lobby:null,room:null,name:'',unPeers:null,locationTag:'lobby',
+  async init(){if(!window.claude||!window.claude.use)return;const r=await withTimeout(window.claude.use('room').catch(()=>null),4000);if(!r)return;this.lobby=r;this.room=r;this.bind(r)},
+  bind(r){this.unPeers&&this.unPeers();this.unPeers=r.onPeers(c=>{S.peers=[...c.peers];renderCursors();document.dispatchEvent(new Event('zx-peers'))},()=>{})},
+  async setSelf(where){if(!this.lobby||!meId())return;this.locationTag=where;const m=me();try{await this.lobby.presence({name:m?m.name:'',id:meId(),where,color:colorFor(m?m.name:'x')})}catch{}},
+  async enter(code){if(!this.lobby)return;try{try{await this.lobby.presence({cursor:null})}catch{}const r=await this.lobby.join('s-'+code.toLowerCase());this.room=r;this.bind(r);const m=me();r.presence({name:m.name,id:meId(),color:colorFor(m.name)});this.setSelf(code)}catch{}},
+  async leave(){if(!this.lobby)return;const r=this.room;if(r&&r!==this.lobby){try{await r.leave()}catch{}}this.room=this.lobby;this.bind(this.lobby);this.setSelf('lobby')},
+  online(id){return this.lobby?this.lobbyPeers().find(p=>p.presence&&p.presence.id===id&&!p.isMe)||null:null},
+  lobbyPeers(){return this.lobby?this.lobby.peers():[]},
+  move(x,y){if(this.room)this.room.presence({cursor:{x:Math.round(x*1e4)/1e4,y:Math.round(y*1e4)/1e4}}).catch(()=>{})},
+  hide(){if(this.room)this.room.presence({cursor:null}).catch(()=>{})}};
+const ARROW='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2 1l15 7-6.5 2L8 17z" fill="CLR" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"/></svg>';
+const curEls=new Map();
+function renderCursors(){const root=$('#cursors');if(!root)return;const seen=new Set();
+  for(const p of S.peers){if(p.isMe||!p.presence||!p.presence.cursor)continue;const c=p.presence.cursor;if(typeof c.x!=='number'||typeof c.y!=='number')continue;
+    let el=curEls.get(p.peer);const nm=String(p.presence.name||'Guest').slice(0,24);const col=/^(hsl\([\d. %]+\)|#[0-9a-fA-F]{6})$/.test(p.presence.color||'')?p.presence.color:'#7c3aed';
+    if(!el){el=h('div',{class:'rc'},h('span',{html:ARROW.replace('CLR',col)}),h('span',{class:'nt',style:'background:'+col},nm));root.append(el);curEls.set(p.peer,el)}
+    else{const t=el.querySelector('.nt');if(t.textContent!==nm)t.textContent=nm}
+    el.style.transform=`translate(${c.x*innerWidth}px,${c.y*innerHeight}px)`;seen.add(p.peer)}
+  for(const[k,el]of curEls)if(!seen.has(k)){el.remove();curEls.delete(k)}}
+function wirePointer(){const tag=$('#selfTag');tag.append(h('span',{class:'nt'}));
+  addEventListener('pointermove',e=>{if(e.pointerType==='touch')return;const m=me();if(!m)return;
+    if(S.prefs.ownTag){tag.classList.add('on');tag.firstChild.textContent=m.name;tag.style.transform=`translate(${e.clientX+12}px,${e.clientY+22}px)`}else tag.classList.remove('on');
+    P.move(e.clientX/innerWidth,e.clientY/innerHeight)},{passive:true});
+  document.addEventListener('pointerleave',()=>{tag.classList.remove('on');P.hide()})}
+/* ===== icons, bus, modal ===== */
+const IC={friends:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',info:'<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',shield:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',user:'<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',logout:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>',copy:'<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',send:'<path d="M5 12h14M12 5l7 7-7 7"/>',plus:'<path d="M12 5v14M5 12h14"/>',check:'<path d="M20 6L9 17l-5-5"/>',lock:'<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',globe:'<circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/>',sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',moon:'<path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/>',code:'<path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/>',eye:'<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/>',phone:'<rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/>',desktop:'<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>',undo:'<path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-15-6.7L3 13"/>',back:'<path d="M19 12H5M12 19l-7-7 7-7"/>',trash:'<path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>',ban:'<circle cx="12" cy="12" r="10"/><path d="M4.9 4.9l14.2 14.2"/>',close:'<path d="M18 6L6 18M6 6l12 12"/>',dice:'<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1"/><circle cx="15.5" cy="15.5" r="1"/><circle cx="12" cy="12" r="1"/>',download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>'};
+function icon(n){const t=document.createElement('template');t.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]||''}</svg>`;return t.content.firstChild}
+const bus=new EventTarget();const emitData=()=>bus.dispatchEvent(new Event('data'));const onData=f=>{bus.addEventListener('data',f);return()=>bus.removeEventListener('data',f)};
+function modal(title,body,opts={}){const offs=[];const back=h('div',{class:'mback',onclick:e=>{if(e.target===back)close()}});
+  const closeBtn=h('button',{class:'iconbtn',onclick:()=>close(),'aria-label':'Close'},icon('close'));
+  const m=h('div',{class:'modal'+(opts.narrow?' narrow':'')+(opts.wide?' wide':''),role:'dialog','aria-modal':'true','aria-label':title},h('div',{class:'mh'},h('h2',null,title),closeBtn),h('div',{class:'mb'},body));
+  back.append(m);$('#modalRoot').append(back);
+  function close(){offs.forEach(f=>f());back.remove();opts.onClose&&opts.onClose()}
+  return{close,el:m,live(fn){offs.push(onData(fn))}}}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){const l=[...document.querySelectorAll('.mback')].pop();l&&l.querySelector('.mh .iconbtn').click()}});
+const safePhoto=a=>a&&typeof a.photo==='string'&&/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/.test(a.photo)&&a.photo.length<60000?a.photo:'';
+function paint(el,name){const a=S.accounts[nameId(name)]||S.cache[nameId(name)];const ph=safePhoto(a);el.style.background=colorFor(name||'?');el.style.backgroundImage='';el.textContent='';
+  el.className=el.className.replace(/\s*frame-\w+/g,'')+(a&&['ring','glitch','sq'].includes(a.frame)?' frame-'+a.frame:'');
+  if(ph){el.style.backgroundImage=`url("${ph}")`;el.style.backgroundSize='cover';el.style.backgroundPosition='center'}else el.textContent=(name||'?').trim().charAt(0).toUpperCase();return el}
+const avatar=(name,sm)=>paint(h('span',{class:'avatar'+(sm?' sm':'')}),name);
+
+/* ===== logo ===== */
+const ZPATH='M28 38H172V62L84 138H172V162H28V138L116 62H28Z';
+function zlogo(size){const t=document.createElement('template');t.innerHTML=`<svg class="zlogo" viewBox="-6 10 212 200" width="${size}" height="${Math.round(size*200/212)}" role="img" aria-label="Zendex logo">
+<g stroke="var(--logo-glitch)" stroke-width="2" fill="none" stroke-linecap="round"><path d="M28 50H10M172 50h20M60 162v22M146 138v-16M100 100H78M100 100v28"/></g>
+<g fill="var(--bg)" stroke="var(--logo-glitch)" stroke-width="2"><circle class="node" cx="7" cy="50" r="4"/><circle class="node" cx="195" cy="50" r="4"/><circle class="node" cx="60" cy="188" r="4"/><circle class="node" cx="146" cy="118" r="4"/><circle class="node" cx="74" cy="100" r="4"/><circle class="node" cx="100" cy="132" r="4"/></g>
+<path class="gA" d="${ZPATH}" fill="var(--logo-glitch)"/>
+<path class="gB" d="${ZPATH}" fill="none" stroke="var(--logo-line)" stroke-width="3"/>
+<path d="${ZPATH}" fill="var(--logo-fill)" stroke="var(--logo-line)" stroke-width="3" stroke-linejoin="round"/>
+<path d="M44 52H156M62 148H156" stroke="var(--logo-glitch)" stroke-width="3" opacity=".9"/>
+<path d="M96 108l30-24" stroke="var(--logo-line)" stroke-width="2" opacity=".7"/></svg>`;return t.content.firstChild}
+const wordmark=big=>h('span',{class:'wordmark'+(big?' big':''),'data-t':'ZENDEX'},'ZENDEX');
+
+/* ===== root render ===== */
+let adding=false,clockTimer=0;
+function setMain(...nodes){const r=$('#app');r.replaceChildren(...nodes.flat().filter(Boolean))}
+function render(){S.renders=(S.renders||0)+1;{const t=(S.rt=S.rt||[]);t.push(Date.now());while(t.length&&Date.now()-t[0]>3000)t.shift();if(t.length>12){if(!S.loopWarned){S.loopWarned=1;console.warn('Zendex: render loop stopped',new Error().stack);toast('Zendex stopped a repeating refresh. Reload the page if something looks stuck.','bad');setTimeout(()=>S.loopWarned=0,5000)}return}}clearInterval(clockTimer);{const t=$('#selfTag .nt');if(t){if(me())t.textContent=me().name;else $('#selfTag').classList.remove('on')}}document.title='Zendex';if(S.offView){S.offView();S.offView=null}
+  if(!meId()||adding)return renderAuth();
+  const m=me();if(m&&isBanned(m))return renderBanned();
+  if(S.settings.maintenance&&!isAdmin())return renderMaintenance();
+  if(S.view==='workspace'&&S.server&&S.servers[S.server])return renderWorkspace();
+  S.view='lobby';renderLobby()}
+function banners(){const out=[];if(D.mode==='local')out.push(h('div',{class:'banner'},'Local mode: accounts, servers and sites are saved on this device only. Open Zendex signed in to Claude to share them with other people.'));
+  const a=S.announce;if(a&&a.text&&LS.get('zendex.dismiss')!==String(a.at)){out.push(h('div',{class:'banner'},h('strong',null,'Announcement: '),a.text,h('button',{class:'btn sm',onclick:e=>{LS.set('zendex.dismiss',String(a.at));e.target.closest('.banner').remove()}},'Dismiss')))}return out}
+
+/* ===== auth ===== */
+function renderAuth(){S.view='auth';let mode='login';const err=h('div',{class:'err',role:'alert'});
+  const n=h('input',{type:'text',id:'authName',autocomplete:'username',maxlength:24,placeholder:'Your username'});
+  const p=h('input',{type:'password',id:'authPw',autocomplete:'current-password',placeholder:'Password'});
+  const p2=h('input',{type:'password',id:'authPw2',autocomplete:'new-password',placeholder:'Repeat password'});
+  const f2=h('div',{class:'field',hidden:true},h('label',{for:'authPw2'},'Repeat password'),p2);
+  const sub=h('button',{class:'btn primary',type:'submit',style:'width:100%'},'Log in');
+  const seg=h('div',{class:'seg'},...['login','signup'].map(k=>h('button',{type:'button','aria-pressed':k===mode,onclick:()=>{mode=k;[...seg.children].forEach((b,i)=>b.setAttribute('aria-pressed',(i===0)===(k==='login')));f2.hidden=k==='login';sub.textContent=k==='login'?'Log in':'Create account';p.autocomplete=k==='login'?'current-password':'new-password';err.textContent=''}},k==='login'?'Log in':'Sign up')));
+  const form=h('form',{onsubmit:async e=>{e.preventDefault();err.textContent='';sub.disabled=true;try{
+      if(mode==='signup'&&p.value!==p2.value)throw new Error('Passwords do not match.');
+      const acc=mode==='login'?await logIn(n.value,p.value):await signUp(n.value,p.value);
+      S.cache[acc.id]={...acc,fresh:Date.now()};addSession(acc);adding=false;S.view='lobby';await P.setSelf('lobby');render();toast('Welcome, '+acc.name);checkWarning()}catch(x){err.textContent=x.message||'Something went wrong.'}sub.disabled=false}},
+    h('div',{class:'field'},h('label',{for:'authName'},'Username'),n),h('div',{class:'field'},h('label',{for:'authPw'},'Password'),p),f2,err,sub,
+    h('p',{class:'hint',style:'margin:12px 0 0'},'Names are unique. Create as many accounts as you like.'));
+  const card=h('div',{class:'card authcard'},h('div',{style:'display:grid;justify-items:center;gap:6px'},zlogo(120),wordmark(true)),h('div',{class:'slogan'},'Code your dreams'),
+    adding?h('p',{class:'hint'},`Adding account ${S.sessions.length+1} of ${MAX_SESSIONS}`):null,h('div',{class:'authtabs'},seg),form,
+    adding?h('button',{class:'btn',style:'margin-top:10px;width:100%',onclick:()=>{adding=false;render()}},'Cancel'):null);
+  setMain(...banners(),h('div',{class:'auth'},h('div',{class:'wrap',style:'display:grid;place-items:center'},card)),footer());n.focus()}
+function renderMaintenance(){setMain(h('div',{class:'auth'},h('div',{class:'card authcard'},zlogo(80),h('h2',{style:'margin:10px 0'},'Back soon'),h('p',{class:'muted'},S.settings.maintMsg||'Zendex is being updated. Please check back in a few minutes.'),h('button',{class:'btn',onclick:()=>{S.sessions=[];S.active=-1;saveSessions();render()}},'Log out'))),footer())}
+function renderBanned(){const a=me();setMain(h('div',{class:'auth'},h('div',{class:'card authcard'},zlogo(80),h('h2',{style:'margin:10px 0'},'Account banned'),h('p',{class:'muted'},banText(a)),
+  h('div',{class:'row',style:'justify-content:center;flex-wrap:wrap'},S.sessions.length>1?h('button',{class:'btn',onclick:()=>{const i=S.sessions.findIndex(s=>!isBanned(S.accounts[s.id]||S.cache[s.id]));if(i>=0){S.active=i;saveSessions();S.view='lobby';render()}}},'Switch account'):null,h('button',{class:'btn danger',onclick:()=>{dropSession(S.active);render()}},'Log out')))),footer())}
+
+/* ===== top bars ===== */
+function footer(){return h('footer',{class:'foot'},h('div',{class:'wrap'},h('button',{class:'linkbtn',onclick:openTerms},'T&C'),
+  h('span',null,'Email us at ',h('span',{class:'em'},'aaryan.takiar@icloud.com'),' or ',h('span',{class:'em'},'zendexcodeyourdreams@gmail.com')),
+  h('button',{class:'btn sm',onclick:()=>copyText('aaryan.takiar@icloud.com, zendexcodeyourdreams@gmail.com')},icon('copy'),'Copy'),
+  h('span',{class:'grow'}),h('span',{class:'pill '+(D.mode==='cloud'?'live':'')},D.mode==='cloud'?'Shared':'This device'),h('span',{class:'mono'},VERSION)))}
+function relCount(){const m=meId();return S.friendships.filter(f=>f.status==='pending'&&f.from!==m&&(f.a===m||f.b===m)).length}
+function topbar(){const m=me();const clock=h('span',{class:'clock'});const tick=()=>{const d=new Date();clock.textContent=fmtDT(d)+' '+fmtT(d)};tick();clockTimer=setInterval(tick,1000);
+  const av=paint(h('button',{class:'avatar btn-av','aria-label':'Accounts and menu','aria-haspopup':'true',onclick:e=>{e.stopPropagation();toggleMenu(top)}}),m.name);
+  const top=h('header',{class:'top'},h('div',{class:'wrap'},h('button',{class:'brand','aria-label':'Zendex home',onclick:()=>leaveServer()},zlogo(34),wordmark(false)),
+    h('div',{class:'welcome'},h('strong',null,'Welcome Back, ',m.name,'!'),clock,isAdmin()?h('span',{class:'tag adm'},'Admin'):null),av));return top}
+function toggleMenu(top){const ex=$('.menu',top);if(ex){ex.remove();return}
+  const menu=h('div',{class:'menu',role:'menu'},h('h4',null,`Accounts ${S.sessions.length}/${MAX_SESSIONS}`));
+  S.sessions.forEach((s,i)=>{const a=S.accounts[s.id]||S.cache[s.id]||s;menu.append(h('div',{class:'row'},h('button',{class:'mi grow','aria-current':i===S.active,onclick:()=>switchTo(i)},avatar(a.name,true),h('span',{class:'grow'},a.name),isAdminId(s.id)?h('span',{class:'tag adm'},'Admin'):null,i===S.active?icon('check'):null),
+    h('button',{class:'iconbtn','aria-label':'Log out '+a.name,style:'width:30px;height:30px',onclick:()=>{dropSession(i);menu.remove();adding=false;if(!S.sessions.length){P.setSelf('lobby')}else{P.setSelf('lobby')}S.view='lobby';render()}},icon('logout'))))});
+  menu.append(h('button',{class:'mi',disabled:S.sessions.length>=MAX_SESSIONS,onclick:()=>{adding=true;render()}},icon('plus'),S.sessions.length>=MAX_SESSIONS?'Account limit reached (3)':'Add another account'),h('h4',null,'Account'),
+    h('button',{class:'mi',onclick:()=>{menu.remove();openProfileEditor()}},icon('user'),'My profile'),h('button',{class:'mi',onclick:()=>{menu.remove();showSites()}},icon('code'),'My websites'),h('button',{class:'mi',onclick:()=>{menu.remove();openSettings()}},icon('settings'),'Settings'),h('button',{class:'mi',onclick:()=>{menu.remove();openFriends()}},icon('friends'),'Friends'),h('button',{class:'mi',onclick:()=>{menu.remove();openInfo()}},icon('info'),'Info'),
+    isAdmin()?h('button',{class:'mi',onclick:()=>{menu.remove();openAdmin()}},icon('shield'),'Admin panel'):null,
+    h('button',{class:'mi',onclick:()=>{S.sessions=[];S.active=-1;saveSessions();adding=false;P.setSelf('lobby');render()}},icon('logout'),'Log out of all accounts'));
+  top.append(menu);setTimeout(()=>document.addEventListener('click',function f(e){if(!menu.contains(e.target)){menu.remove()}document.removeEventListener('click',f)},{once:true}),0)}
+function switchTo(i){S.active=i;saveSessions();adding=false;S.view='lobby';if(S.server)leaveServer(true);P.setSelf('lobby');render();toast('Switched to '+me().name);checkWarning()}
+function themeBtn(){const dark=document.documentElement.getAttribute('data-theme')?document.documentElement.getAttribute('data-theme')==='dark':matchMedia('(prefers-color-scheme:dark)').matches;
+  return h('button',{class:'iconbtn','aria-label':'Switch to '+(dark?'light':'dark')+' mode',onclick:()=>{S.prefs.theme=dark?'light':'dark';savePrefs();applyPrefs();render()}},icon(dark?'sun':'moon'))}
+function bar2(centre){const rc=relCount();return h('div',{class:'bar2'},h('div',{class:'wrap'},
+  h('button',{class:'iconbtn','aria-label':'Friends',onclick:openFriends},icon('friends'),rc?h('span',{class:'dot'},rc):null),
+  h('button',{class:'iconbtn','aria-label':'Settings',onclick:openSettings},icon('settings')),
+  isAdmin()?h('button',{class:'iconbtn','aria-label':'Admin panel',onclick:openAdmin},icon('shield')):null,
+  centre,h('span',{class:'grow',style:centre?'display:none':''}),themeBtn(),h('button',{class:'iconbtn','aria-label':'Info',onclick:openInfo},icon('info'))))}
+
+/* ===== text modals ===== */
+function openTerms(){modal('Terms and conditions',h('div',{class:'note'},
+  h('p',null,'Zendex is a project by Aaryan Takiar and friends. By using it you agree to the points below.'),
+  h('p',null,'1. Be kind. No harassment, hate, or anything that could hurt other people.'),
+  h('p',null,'2. Do not build websites that trick people, steal information, or break the law.'),
+  h('p',null,'3. Admins can ban accounts and close servers that break these rules.'),
+  h('p',null,'4. Passwords are scrambled before they are stored, but Zendex is a hobby project. Do not reuse a password from somewhere important.'),
+  h('p',null,'5. Websites you build belong to you and the friends in your server.')))}
+function openInfo(){const body=h('div');let tab='about';const tabs=h('div',{class:'tabsm'});const pane=h('div');
+  const noteAbout=()=>h('div',null,h('p',{class:'dated',style:'margin:0 0 8px'},'Notebook entry · Zendex dev note'),h('div',{class:'note'},
+    h('p',null,'Finally, Zendex works. Not public, but there are some test or different versions we have: Zendex Infinite Multiplayer, Zendex Beta and Zendex Admins. All are currently local Python. Only me (Aaryan) and Kahaan have the code.'),
+    h('p',null,'No, Zendex is not done for good. It is alive and in 2 people testing.'),
+    h('p',null,h('span',{class:'dated'},'11.9.26'),' · C++, Swift (iOS) and HTML Zendex are coming soon. Liquid Glass.'),
+    h('p',null,h('span',{class:'dated'},'22.9.26'),' · The Zendex Rebirth might be the next design.')),
+    h('p',{class:'hint',style:'margin-top:12px'},'Zendex builds websites from a description. Make a server, invite friends and build together.'));
+  const adminInfo=()=>h('div',null,h('div',{class:'note'},h('p',null,h('strong',null,'Admins: '),ADMINS.map(a=>a.name).join(', '),'. Admin names are reserved and cannot be signed up by anyone else.'),
+    h('p',null,h('strong',null,'Admin panel: '),'open it from the shield button. Ban for any length or forever, unban, lift a permanent ban, warn, mute building, force a log out, reset a password, delete an account, manage servers and websites, read the activity log, switch sign-ups, building or maintenance mode, and post announcements.'),
+    h('p',null,h('strong',null,'Bans: '),'a banned person is signed out straight away and sees the reason you wrote. Admins cannot be banned or deleted.'),
+    h('p',null,h('strong',null,'Versions: '),'Zendex Infinite Multiplayer, Zendex Beta, Zendex Admins (local Python). This page is the HTML Zendex Rebirth. Storage mode right now: ',D.mode==='cloud'?'shared database (everyone sees the same accounts).':'this device only.'),
+    h('p',null,h('strong',null,'Security: '),'sign-in is checked in the browser and the data store is open to anyone using the page, so this protects a friendly project, not secrets. Move checks to a real server before a public launch.')));
+  const draw=()=>{tabs.replaceChildren(h('button',{class:'tab','aria-selected':tab==='about',onclick:()=>{tab='about';draw()}},'About Zendex'),isAdmin()?h('button',{class:'tab','aria-selected':tab==='admin',onclick:()=>{tab='admin';draw()}},'Admin info'):null);pane.replaceChildren(tab==='about'?noteAbout():adminInfo())};draw();body.append(tabs,pane);modal('Info',body)}
+
+/* ===== settings ===== */
+function openSettings(){const body=h('div');const m=modal('Settings',body);
+  const tog=(label,key,sub)=>{const b=h('button',{class:'tog',role:'switch','aria-pressed':!!S.prefs[key],'aria-label':label,onclick:()=>{S.prefs[key]=!S.prefs[key];b.setAttribute('aria-pressed',S.prefs[key]);savePrefs();applyPrefs();if(key==='ownTag')$('#selfTag').classList.remove('on')}});return h('div',{class:'switch'},h('div',null,h('div',null,label),sub?h('div',{class:'hint'},sub):null),b)};
+  const themeSeg=h('div',{class:'seg'},...[['light','Light'],['dark','Dark'],['system','System']].map(([k,l])=>h('button',{'aria-pressed':S.prefs.theme===k,onclick:e=>{S.prefs.theme=k;savePrefs();applyPrefs();[...themeSeg.children].forEach(b=>b.setAttribute('aria-pressed',b===e.target))}},l)));
+  const eng=h('select',{id:'engine',onchange:()=>{S.prefs.engine=eng.value;savePrefs()}},...[['auto','Auto (free AI, then built-in builder)'],['free','Free AI only'],['claude','Claude (uses your Claude allowance)'],['offline','Built-in builder (always works)']].map(([v,l])=>h('option',{value:v,selected:S.prefs.engine===v},l)));
+  const accs=h('div',{class:'slist'});const drawA=()=>{accs.replaceChildren(...S.sessions.map((s,i)=>h('div',{class:'srv'},avatar(s.name,true),h('span',{class:'grow'},s.name,i===S.active?' (current)':''),i!==S.active?h('button',{class:'btn sm',onclick:()=>{m.close();switchTo(i)}},'Switch'):null)),h('button',{class:'btn',disabled:S.sessions.length>=MAX_SESSIONS,onclick:()=>{m.close();adding=true;render()}},icon('plus'),`Add account (${S.sessions.length}/${MAX_SESSIONS})`))};drawA();
+  const cur=h('input',{type:'password',id:'pwCur',autocomplete:'current-password'}),nw=h('input',{type:'password',id:'pwNew',autocomplete:'new-password'}),msg=h('div',{class:'err'});
+  body.append(h('div',{class:'lbl'},'Appearance'),h('div',{class:'switch'},h('span',null,'Theme'),themeSeg),tog('Code rain background','fx','Animated tech background.'),tog('Glitch effects','glitch','Logo and wordmark glitches.'),tog('Name tag under my cursor','ownTag','Other people always see your tag in a shared server.'),
+    h('div',{class:'field',style:'margin-top:14px'},h('label',{for:'engine'},'Website builder'),eng,h('div',{class:'hint'},'The built-in builder has no limits and needs no internet. Free AI is tried first when the page is allowed to reach it.')),
+    h('div',{class:'lbl',style:'margin-top:18px'},'Signed-in accounts'),accs,
+    h('div',{class:'lbl',style:'margin:18px 0 8px'},'Change password'),h('div',{class:'field'},h('label',{for:'pwCur'},'Current password'),cur),h('div',{class:'field'},h('label',{for:'pwNew'},'New password'),nw),msg,
+    h('button',{class:'btn primary',onclick:async()=>{msg.className='err';msg.textContent='';try{const id=meId();const cr=await D.get('creds/'+id);if(!cr||hashPw(cur.value,cr.salt)!==cr.hash)throw new Error('Current password is wrong.');if(nw.value.length<6)throw new Error('New password must be at least 6 characters.');const salt=rnd(8);await D.set('creds/'+id,{salt,hash:hashPw(nw.value,salt)});cur.value=nw.value='';msg.className='err ok';msg.textContent='Password changed.'}catch(x){msg.textContent=x.message}}},'Save password'))}
+/* ===== friends ===== */
+const fid=(a,b)=>[a,b].sort().join('~');
+const myFriends=()=>{const m=meId();return S.friendships.filter(f=>f.status==='accepted'&&(f.a===m||f.b===m)).map(f=>f.a===m?f.b:f.a).filter(id=>S.accounts[id])};
+const relWith=o=>S.friendships.find(f=>f._id===fid(meId(),o));
+async function addFriend(o){const m=meId();const [a,b]=[m,o].sort();await D.set('friendships/'+fid(m,o),{a,b,from:m,status:'pending',at:Date.now()});toast('Friend request sent to '+nameOf(o))}
+function whereIs(id){const p=P.online(id);if(!p)return null;const w=p.presence&&p.presence.where;return w&&w!=='lobby'?'In server '+String(w).slice(0,12):'Online'}
+function openFriends(){let tab='friends';const body=h('div'),tabs=h('div',{class:'tabsm'}),pane=h('div');
+  const q=h('input',{type:'search',id:'findQ',placeholder:'Search usernames',autocomplete:'off'});const m=modal('Friends',body);
+  const row=(id,...btns)=>h('div',{class:'srv'},avatar(nameOf(id),true),h('button',{class:'linkbtn grow',style:'overflow:hidden;text-overflow:ellipsis;text-align:left;text-decoration:none;color:inherit',onclick:()=>openProfile(id)},nameOf(id)),...btns);
+  const draw=()=>{const inc=S.friendships.filter(f=>f.status==='pending'&&f.from!==meId()&&(f.a===meId()||f.b===meId()));
+    tabs.replaceChildren(...[['friends','Friends'],['requests','Requests'+(inc.length?` (${inc.length})`:'')],['find','Find people']].map(([k,l])=>h('button',{class:'tab','aria-selected':tab===k,onclick:()=>{tab=k;draw()}},l)));
+    const list=h('div',{class:'slist',style:'max-height:420px'});
+    if(tab==='friends'){const fr=myFriends();if(!fr.length)list.append(h('div',{class:'empty'},'No friends yet. Use Find people to send a request.'));
+      fr.forEach(id=>{const w=whereIs(id);list.append(row(id,h('span',{class:'status'+(w?' on':''),title:w||'Offline'}),h('span',{class:'hint'},w||'Offline'),h('button',{class:'btn sm danger',onclick:()=>D.del('friendships/'+fid(meId(),id))},'Remove')))})}
+    if(tab==='requests'){const out=S.friendships.filter(f=>f.status==='pending'&&f.from===meId());if(!inc.length&&!out.length)list.append(h('div',{class:'empty'},'No pending requests.'));
+      inc.forEach(f=>{const o=f.a===meId()?f.b:f.a;list.append(row(o,h('button',{class:'btn sm primary',onclick:()=>D.update('friendships/'+f._id,{status:'accepted'})},'Accept'),h('button',{class:'btn sm',onclick:()=>D.del('friendships/'+f._id)},'Decline')))});
+      out.forEach(f=>{const o=f.a===meId()?f.b:f.a;list.append(row(o,h('span',{class:'hint'},'Sent'),h('button',{class:'btn sm',onclick:()=>D.del('friendships/'+f._id)},'Cancel')))})}
+    if(tab==='find'){const t=q.value.trim().toLowerCase();const res=Object.values(S.accounts).filter(a=>a.id!==meId()&&!isBanned(a)&&!relWith(a.id)&&(!t||a.name.toLowerCase().includes(t))).sort((a,b)=>a.name.localeCompare(b.name)).slice(0,30);
+      if(!res.length)list.append(h('div',{class:'empty'},t?'No one with that name.':'Nobody else has signed up yet.'));res.forEach(a=>list.append(row(a.id,isAdminId(a.id)?h('span',{class:'tag adm'},'Admin'):null,h('button',{class:'btn sm primary',onclick:()=>addFriend(a.id)},icon('plus'),'Add'))))}
+    pane.replaceChildren(tab==='find'?h('div',{class:'field'},q):null,list)};
+  q.addEventListener('input',draw);body.append(tabs,pane);draw();m.live(()=>{if(document.activeElement!==q)draw()})}
+
+/* ===== servers ===== */
+async function claimServer({name,privacy,invited,code,prompt}){code=String(code).toUpperCase().replace(/[^A-Z0-9]/g,'');if(code.length<4||code.length>12)throw new Error('Codes use 4 to 12 letters or numbers.');
+  const doc={code,name:cleanName(name)||me().name+"'s server",privacy,host:meId(),members:[meId()],invited:invited||[],created:Date.now()};
+  if(!await D.claim('servers/'+code,doc))throw new Error('That code is already in use. Pick another or press Randomise.');S.servers[code]={...doc,_ok:1,_id:code};S.localSrv[code]=Date.now();openServer(code,{prompt})}
+async function joinServer(code){code=String(code).toUpperCase().replace(/[^A-Z0-9]/g,'');if(code.length<4)throw new Error('Enter a server code.');const s=await D.get('servers/'+code);if(!s)throw new Error('No server has that code.');const id=meId();
+  if(!s.members.includes(id)){if(s.members.length>=MAX_MEMBERS)throw new Error('That server is full.');s.members=[...s.members,id];s.invited=(s.invited||[]).filter(x=>x!==id);await D.update('servers/'+code,{members:s.members,invited:s.invited})}
+  S.servers[code]={...s,_id:code};openServer(code)}
+async function openServer(code,opts={}){if(!S.servers[code]){const s=await D.get('servers/'+code);if(!s)return toast('Server not found','bad');S.servers[code]={...s,_id:code}}S.server=code;S.view='workspace';S.site=null;S.pending=opts.prompt||null;S.missingAt=0;P.enter(code);render()}
+async function leaveServer(silent){if(S.server){P.leave()}S.server=null;S.view='lobby';S.site=null;if(!silent)render()}
+async function leaveMembership(code){const s=S.servers[code]||await D.get('servers/'+code);if(!s)return;const id=meId();const rest=s.members.filter(x=>x!==id);
+  if(!rest.length){await D.del('servers/'+code);await D.del('sites/'+code)}else await D.update('servers/'+code,{members:rest,host:s.host===id?rest[0]:s.host});await leaveServer()}
+async function closeServer(code){await D.del('servers/'+code);await D.del('sites/'+code);delete S.servers[code]}
+function confirmDialog(title,text,okLabel,onOk,danger=true){const m=modal(title,h('div',null,h('p',null,text),h('div',{class:'row',style:'justify-content:flex-end'},h('button',{class:'btn',onclick:()=>m.close()},'Cancel'),h('button',{class:'btn '+(danger?'danger':'primary'),onclick:async()=>{try{await onOk()}catch(e){toast(e.message||'Failed','bad')}m.close()}},okLabel))),{narrow:true})}
+
+/* ===== lobby ===== */
+function createPanel(){let priv=false;const invited=new Set();
+  const el=h('section',{class:'card panel','data-off':0,id:'createPanel'});const err=h('div',{class:'err',role:'alert'});
+  const name=h('input',{type:'text',id:'srvName',maxlength:30,placeholder:'Server name (optional)'}),code=h('input',{type:'text',id:'srvCode',maxlength:12,autocomplete:'off',placeholder:'Enter code',value:newCode(),style:'text-transform:uppercase;font-family:var(--f-mono)'});
+  const pub=h('button',{type:'button','aria-pressed':true,onclick:()=>set(false)},icon('globe'),'Public'),prv=h('button',{type:'button','aria-pressed':false,onclick:()=>set(true)},icon('lock'),'Private');
+  pub.style.cssText=prv.style.cssText='display:inline-flex;gap:6px;align-items:center';
+  const set=p=>{priv=p;pub.setAttribute('aria-pressed',!p);prv.setAttribute('aria-pressed',p)};
+  const list=h('div',{class:'members'}),sel=h('select',{id:'invSel','aria-label':'Invite a friend'});
+  const draw=()=>{list.replaceChildren(h('div',{class:'mem'},avatar(me().name,true),h('span',{class:'nm'},me().name),h('span',{class:'tag'},'Host')),...[...invited].map(id=>h('div',{class:'mem'},avatar(nameOf(id),true),h('span',{class:'nm'},nameOf(id)),h('span',{class:'tag'},'Invited'),h('button',{class:'iconbtn',style:'width:28px;height:28px','aria-label':'Remove '+nameOf(id),onclick:()=>{invited.delete(id);draw()}},icon('close')))));
+    const opts=myFriends().filter(f=>!invited.has(f));sel.replaceChildren(h('option',{value:''},opts.length?'Invite a friend…':'Add friends to invite them'),...opts.map(f=>h('option',{value:f},nameOf(f))))};
+  sel.addEventListener('change',()=>{if(sel.value&&invited.size<MAX_MEMBERS-1){invited.add(sel.value);draw()}});draw();
+  const go=h('button',{class:'btn primary',style:'width:100%',onclick:async()=>{err.textContent='';go.disabled=true;try{await claimServer({name:name.value,privacy:priv?'private':'public',invited:[...invited],code:code.value})}catch(e){err.textContent=e.message}go.disabled=false}},'CREATE');
+  el.append(h('h2',null,'Create Server'),h('div',{class:'row wrap-r'},h('span',{class:'lbl'},'Selected'),h('div',{class:'seg'},pub,prv)),
+    h('div',{class:'field',style:'margin:0'},h('label',{for:'srvCode'},'Server code'),h('div',{class:'row'},code,h('button',{class:'btn',type:'button',onclick:()=>code.value=newCode(),'aria-label':'Randomise code'},icon('dice'),'Randomise'))),
+    h('div',{class:'field',style:'margin:0'},h('label',{for:'srvName'},'Name'),name),h('div',{class:'lbl'},'Server members'),list,sel,err,go);
+  return{el,update:draw}}
+function joinPanel(){const el=h('section',{class:'card panel','data-off':0,id:'joinPanel'});const err=h('div',{class:'err',role:'alert'});
+  const code=h('input',{type:'text',id:'joinCode',maxlength:12,autocomplete:'off',placeholder:'Enter code',style:'text-transform:uppercase;font-family:var(--f-mono)'});
+  const doJoin=async c=>{err.textContent='';try{await joinServer(c)}catch(e){err.textContent=e.message}};
+  const fl=h('div',{class:'slist'}),ol=h('div',{class:'slist'});
+  const srvRow=(s,extra)=>h('div',{class:'srv'},h('div',{class:'grow',style:'min-width:0'},h('div',{style:'overflow:hidden;text-overflow:ellipsis;white-space:nowrap'},s.name),h('div',{class:'hint mono'},s.code,' · ',s.members.length,'/',MAX_MEMBERS,' · ',s.privacy)),extra,h('button',{class:'btn sm primary',onclick:()=>doJoin(s.code)},'Join'));
+  const draw=()=>{const fr=new Set(myFriends());const srvs=Object.values(S.servers);
+    const fs=srvs.filter(s=>s.members.some(m=>fr.has(m)&&m!==meId())).slice(0,20);
+    fl.replaceChildren(...(fs.length?fs.map(s=>srvRow(s,h('span',{class:'hint'},s.members.filter(m=>fr.has(m)).map(nameOf).join(', ')))):[h('div',{class:'hint'},'None of your friends are in a server right now.')]));
+    const os=srvs.filter(s=>s.privacy==='public'||(s.invited||[]).includes(meId())).filter(s=>!s.members.includes(meId())).slice(0,30);
+    ol.replaceChildren(...(os.length?os.map(s=>srvRow(s,(s.invited||[]).includes(meId())?h('span',{class:'tag good'},'Invited'):null)):[h('div',{class:'hint'},'No open servers yet. Create the first one.')]))};
+  el.append(h('h2',null,'Join Server'),h('div',{class:'field',style:'margin:0'},h('label',{for:'joinCode'},'Server code'),h('div',{class:'row'},code,h('button',{class:'btn primary',onclick:()=>doJoin(code.value)},'JOIN'))),err,
+    h('div',{class:'orline'},'OR'),h('div',{class:'lbl'},'Join a friend'),fl,h('div',{class:'lbl'},'Open servers'),ol);
+  code.addEventListener('keydown',e=>{if(e.key==='Enter')doJoin(code.value)});draw();return{el,update:draw}}
+function promptBar(onSend,id){const inp=h('input',{type:'text',id,maxlength:600,autocomplete:'off',placeholder:'Describe your Website here...','aria-label':'Describe your website'});
+  const send=()=>{const v=inp.value.trim();if(!v)return;inp.value='';onSend(v)};inp.addEventListener('keydown',e=>{if(e.key==='Enter')send()});
+  return{el:h('div',{class:'promptbar'},inp,h('button',{class:'go','aria-label':'Build',onclick:send},icon('send'))),inp}}
+/* ===== workspace ===== */
+function renderWorkspace(){const code=S.server;let srv=S.servers[code];const top=topbar();let mode='preview',device='desktop',codeDirty=false;
+  const memBox=h('div',{class:'members'}),hist=h('div',{class:'hist'}),sel=h('select',{id:'wsInvite','aria-label':'Invite a friend'});
+  const privSeg=h('div',{class:'seg'});const closeBtns=h('div',{class:'row wrap-r'});
+  const rail=h('aside',{class:'rail'},h('div',{class:'card'},h('h3',null,srv.name),h('div',{class:'row',style:'margin-bottom:10px'},h('span',{class:'mono',style:'font-weight:600;letter-spacing:.14em'},code),h('button',{class:'iconbtn',style:'width:30px;height:30px','aria-label':'Copy server code',onclick:()=>copyText(code)},icon('copy'))),privSeg,closeBtns),
+    h('div',{class:'card'},h('h3',null,'Members'),memBox,sel),h('div',{class:'card'},h('h3',null,'Build history'),hist));
+  let scriptsOn=LS.get('zendex.scripts')!=='0';const sbx=()=>scriptsOn?'allow-scripts allow-forms':'';const iframe=h('iframe',{title:'Website preview',sandbox:sbx()});const ta=h('textarea',{id:'codeEdit',spellcheck:'false','aria-label':'Website code'});
+  const overlay=h('div',{class:'building',hidden:true},h('div',null,h('div',{class:'spin'}),h('p',{id:'buildMsg',style:'margin:10px 0 0'},'Building…'),h('button',{class:'btn sm cancel',onclick:()=>cancelBuild()},'Cancel')));
+  const emptyEl=h('div',{class:'empty'},zlogo(90),h('strong',null,'No website yet'),h('span',null,'Describe it below and Zendex builds it for everyone in this server.'));
+  const view=h('div',{class:'view'},emptyEl,overlay);
+  const mkSeg=(opts,get,set)=>{const s=h('div',{class:'seg'});const d=()=>{s.replaceChildren(...opts.map(([k,l,ic])=>h('button',{'aria-pressed':get()===k,'aria-label':l,onclick:()=>{set(k);d();update()}},icon(ic),l)));[...s.children].forEach(b=>b.style.cssText='display:inline-flex;gap:6px;align-items:center')};d();return s};
+  const modeSeg=mkSeg([['preview','Preview','eye'],['code','Code','code']],()=>mode,v=>mode=v),devSeg=mkSeg([['desktop','Desktop','desktop'],['phone','Phone','phone']],()=>device,v=>device=v);
+  const undoBtn=h('button',{class:'btn sm',onclick:async()=>{const s=S.site;if(!s||!s.prev)return;await D.set('sites/'+code,{...s,html:s.prev,prev:'',updated:Date.now(),history:[...(s.history||[]),{by:meId(),name:me().name,p:'Undid the last change',at:Date.now(),e:'undo'}].slice(-25)})}},icon('undo'),'Undo');
+  const copyBtn=h('button',{class:'btn sm',onclick:()=>S.site&&copyText(S.site.html)},icon('copy'),'Copy code');
+  const saveBtn=h('button',{class:'btn sm',onclick:async()=>{try{const dl=window.claude&&window.claude.use?await withTimeout(window.claude.use('downloads'),2000):null;if(!dl)throw 0;await dl.save({filename:(srv.name||'website').replace(/[^\w.-]+/g,'-')+'.html',data:S.site.html})}catch{toast('Saving files is not available here. Use Copy code instead.','bad')}}},icon('download'),'Save .html');
+  const saveCode=h('button',{class:'btn sm primary',hidden:true,onclick:async()=>{const s=S.site||{};await D.set('sites/'+code,{...s,prev:s.html&&s.html.length<100000?s.html:'',html:ta.value,updated:Date.now(),history:[...(s.history||[]),{by:meId(),name:me().name,p:'Edited the code by hand',at:Date.now(),e:'manual'}].slice(-25)});codeDirty=false;saveCode.hidden=true}},'Save edits');
+  ta.addEventListener('input',()=>{codeDirty=true;saveCode.hidden=false});
+  const scrBtn=h('button',{class:'btn sm',title:'Turn off if a preview freezes',onclick:()=>{scriptsOn=!scriptsOn;LS.set('zendex.scripts',scriptsOn?'1':'0');iframe.setAttribute('sandbox',sbx());iframe._h=null;update()}});const status=h('span',{class:'hint grow'});
+  const tools=h('div',{class:'tools'},modeSeg,devSeg,undoBtn,copyBtn,saveBtn,saveCode,scrBtn,status);
+  const pb=promptBar(v=>runBuild(v),'wsPrompt');
+  const back=h('button',{class:'btn',onclick:()=>leaveServer()},icon('back'),'Lobby');
+  const stage=h('section',{class:'stage'},tools,view,pb.el);
+  setMain(top,...banners(),bar2(back),h('main',{class:'wrap ws'},rail,stage),footer());
+  function update(){srv=S.servers[code];if(!srv){if(!S.missingAt)S.missingAt=Date.now();if(Date.now()-S.missingAt<5000){setTimeout(update,1500);return}toast('This server was closed.');leaveServer();return}S.missingAt=0;
+    const isHost=srv.host===meId();const fr=new Set(myFriends());
+    const here=new Set((P.room?P.room.peers():[]).filter(p=>p.presence&&p.presence.id).map(p=>p.presence.id));here.add(meId());
+    memBox.replaceChildren(...srv.members.map(id=>h('div',{class:'mem'},h('span',{class:'status'+(here.has(id)?' on':'')}),avatar(nameOf(id),true),h('button',{class:'linkbtn nm',style:'text-align:left;text-decoration:none;color:inherit',onclick:()=>openProfile(id)},nameOf(id)),id===srv.host?h('span',{class:'tag'},'Host'):null,isAdminId(id)?h('span',{class:'tag adm'},'Admin'):null)),...(srv.invited||[]).map(id=>h('div',{class:'mem'},h('span',{class:'status'}),avatar(nameOf(id),true),h('span',{class:'nm muted'},nameOf(id)),h('span',{class:'tag'},'Invited'))));
+    const inv=[...fr].filter(f=>!srv.members.includes(f)&&!(srv.invited||[]).includes(f));
+    sel.replaceChildren(h('option',{value:''},inv.length?'Invite a friend…':'No friends to invite'),...inv.map(f=>h('option',{value:f},nameOf(f))));sel.onchange=async()=>{if(sel.value){await D.update('servers/'+code,{invited:[...(srv.invited||[]),sel.value]});toast('Invited '+nameOf(sel.value))}};
+    privSeg.replaceChildren(...['public','private'].map(k=>h('button',{'aria-pressed':srv.privacy===k,disabled:!isHost,onclick:()=>D.update('servers/'+code,{privacy:k})},k==='public'?'Public':'Private')));
+    closeBtns.replaceChildren(h('button',{class:'btn sm',onclick:()=>confirmDialog('Leave server','You can join again with the code '+code+'.','Leave',()=>leaveMembership(code))},'Leave'),isHost||isAdmin()?h('button',{class:'btn sm danger',onclick:()=>confirmDialog('Close server','This deletes the server and its website for everyone.','Close server',async()=>{await closeServer(code);await leaveServer()})},'Close'):null);
+    const s=S.site,html=s&&s.html||'';if(html&&!srv.siteAt&&!(S.metaFixed=S.metaFixed||{})[code]){S.metaFixed[code]=1;setSiteMeta(code,s)}const busyOther=s&&s.busy&&Date.now()-s.busy.at<90000&&s.busy.by!==meId();
+    hist.replaceChildren(...((s&&s.history)||[]).slice().reverse().map(x=>h('div',null,x.p,h('small',null,(x.name||'Someone'),' · ',ago(x.at),x.e?' · '+({free:'Free AI',claude:'Claude',offline:'Built-in',manual:'Manual',undo:'Undo'}[x.e]||x.e):''))));if(!hist.children.length)hist.append(h('div',{class:'hint'},'Nothing built yet.'));
+    scrBtn.textContent='Page scripts: '+(scriptsOn?'on':'off');undoBtn.disabled=!(s&&s.prev);copyBtn.disabled=saveBtn.disabled=!html;modeSeg.style.display='';devSeg.style.display=mode==='preview'?'':'none';
+    overlay.hidden=!(S.building||busyOther);if(busyOther)$('#buildMsg').textContent=s.busy.name+' is building…';else if(S.building)$('#buildMsg').textContent='Building your website…';
+    view.classList.toggle('phone',device==='phone'&&mode==='preview');
+    const show=mode==='preview'?(html?iframe:emptyEl):ta;[...view.children].forEach(c=>{if(c!==overlay&&c!==show)c.remove()});if(show.parentNode!==view)view.prepend(show);
+    if(mode==='preview'&&html&&iframe._h!==html){iframe._h=html;iframe.srcdoc=html}
+    if(mode==='code'&&document.activeElement!==ta&&!codeDirty&&ta.value!==html)ta.value=html;if(mode==='code'&&!html&&!ta.value)ta.placeholder='The code appears here after the first build.';
+    saveCode.hidden=!(mode==='code'&&codeDirty);status.textContent=s&&s.updated?'Updated '+ago(s.updated):''}
+  const unSite=D.watchDoc('sites/'+code,d=>{S.site=d;update()});const unData=onData(update);const unPeers=onPeersBus(throttle(update,700));const tick=setInterval(()=>{if(S.building){const t=$('#buildMsg');if(t)t.textContent='Building your website… '+Math.round((Date.now()-(S.buildStart||Date.now()))/1000)+'s'}},1000);S.offView=()=>{unSite();unData();unPeers();clearInterval(tick)};
+  update();if(S.pending){const p=S.pending;S.pending=null;setTimeout(()=>{if(S.server===code)runBuild(p)},50)}}
+function onPeersBus(f){document.addEventListener('zx-peers',f);return()=>document.removeEventListener('zx-peers',f)}
+
+/* ===== website builders ===== */
+const SYS='You are Zendex, a website builder. Reply with ONE complete, self-contained HTML document (inline CSS and JavaScript, Google Fonts allowed, no other external files). Make it modern, responsive and good looking, with real copy instead of placeholder text. Return only the HTML, no explanation and no markdown fences.';
+const AI={blocked:false,told:false,
+  clean(t){t=String(t||'').replace(/^```(?:html)?\s*/i,'').replace(/```\s*$/,'');const i=t.search(/<!doctype html|<html/i);if(i>0)t=t.slice(i);const j=t.toLowerCase().lastIndexOf('</html>');if(j>0)t=t.slice(0,j+7);if(t.length<200||!/<html|<!doctype/i.test(t))throw new Error('The AI did not return a website.');return t},
+  msg(text,cur){return cur?`Here is the current website:\n\n${cur}\n\nChange it like this: ${text}\n\nReturn the full updated HTML.`:`Build this website: ${text}`},
+  async free(text,cur){if(window.claude&&window.claude.use)throw new Error('Free AI cannot be reached from inside Claude pages.');const ctl=new AbortController();let to;const lim=new Promise((_,rej)=>{to=setTimeout(()=>{ctl.abort();rej(new Error('Free AI timed out.'))},12000)});
+    try{const run=(async()=>{const r=await fetch('https://text.pollinations.ai/openai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'openai',messages:[{role:'system',content:SYS},{role:'user',content:this.msg(text,cur)}]}),signal:ctl.signal});if(!r.ok)throw new Error('Free AI returned '+r.status);const j=await r.json();return this.clean(j.choices[0].message.content)})();return await Promise.race([run,lim])}finally{clearTimeout(to)}},
+  async claude(text,cur){const sample=window.claude&&window.claude.use?await withTimeout(window.claude.use('sample'),3000):null;if(!sample)throw new Error('Claude is not available in this view.');let to;const lim=new Promise((_,rej)=>{to=setTimeout(()=>rej(new Error('Claude took too long.')),90000)});
+    try{const r=await Promise.race([sample([{role:'user',content:SYS+'\n\n'+this.msg(text,cur)}],{modelTier:'default',cache:false}),lim]);return this.clean(r.text)}finally{clearTimeout(to)}},
+  async build(text,cur,history){const pref=S.prefs.engine;const order=pref==='auto'?['free','offline']:pref==='offline'?['offline']:[pref,'offline'];
+    for(const e of order){try{if(e==='offline')return{html:OB.render([...history,text].join('. ')),engine:'offline'};if(e==='free'&&this.blocked)continue;const html=await this[e](text,cur);return{html,engine:e}}catch(err){console.warn('engine',e,err);if(e==='free')this.blocked=true;if(!this.told&&order.length>1){this.told=true;toast(({free:'Free AI is not reachable from this page',claude:'Claude is not available'})[e]+'. Using the built-in builder.')}}}
+    return{html:OB.render([...history,text].join('. ')),engine:'offline'}}};
+/* ===== shared helpers ===== */
+const throttle=(f,ms)=>{let t=0,q=0;return()=>{const n=Date.now();if(n-t>=ms){t=n;f()}else if(!q){q=setTimeout(()=>{q=0;t=Date.now();f()},ms-(n-t))}}};
+const siteTitle=html=>{const m=/<title[^>]*>([^<]{1,80})/i.exec(html||'');return m?m[1].trim():''};
+const isMuted=a=>!!(a&&a.muted);
+const banKind=a=>!isBanned(a)?'none':a.until?'temp':'perma';
+async function setSiteMeta(code,s){try{await D.update('servers/'+code,{siteAt:(s&&s.updated)||Date.now(),siteTitle:siteTitle(s&&s.html),siteBytes:((s&&s.html)||'').length})}catch{}}
+async function saveHtml(name,html){try{const dl=window.claude&&window.claude.use?await withTimeout(window.claude.use('downloads'),2000):null;if(!dl)throw 0;await dl.save({filename:(name||'website').replace(/[^\w.-]+/g,'-')+'.html',data:html})}catch{toast('Saving files is not available here. Use Copy code instead.','bad')}}
+const siteCache=new Map();
+function loadSite(code){if(!siteCache.has(code))siteCache.set(code,D.get('sites/'+code).then(d=>d&&d.html?d:null).catch(()=>null));return siteCache.get(code)}
+async function previewSite(code,title){const d=await D.get('sites/'+code);if(!d||!d.html)return toast('No website in that server yet.','bad');const fr=h('iframe',{class:'prevframe',title:'Website preview',sandbox:'allow-scripts allow-forms'});fr.srcdoc=d.html;modal(title||'Preview',fr,{wide:true})}
+async function act(fn,ok){try{await fn();if(ok)toast(ok)}catch(e){toast((e&&e.message)||'That did not work.','bad')}}
+
+/* ===== profile ===== */
+const BANNERS=['linear-gradient(135deg,#6d28d9,#0a0612)','linear-gradient(135deg,#ec4899,#6d28d9)','linear-gradient(135deg,#06b6d4,#3b82f6)','linear-gradient(135deg,#22c55e,#064e3b)','linear-gradient(135deg,#f97316,#7f1d1d)','repeating-linear-gradient(45deg,#1a1230 0 10px,#2d2249 10px 20px)'];
+const PCOLORS=['#8b5cf6','#ec4899','#ef4444','#f97316','#eab308','#22c55e','#06b6d4','#3b82f6'];
+function paintAcc(el,a){const ph=safePhoto(a);const c=a&&/^#[0-9a-fA-F]{6}$/.test(a.pcolor||'')?a.pcolor:colorOf((a&&a.name)||'?');el.style.background=c;el.style.backgroundImage='';el.textContent='';
+  el.className=el.className.replace(/\s*frame-\w+/g,'')+(a&&['ring','glitch','sq'].includes(a.frame)?' frame-'+a.frame:'');
+  if(ph){el.style.backgroundImage=`url("${ph}")`;el.style.backgroundSize='cover';el.style.backgroundPosition='center'}else el.textContent=((a&&a.name)||'?').trim().charAt(0).toUpperCase();return el}
+function profileCard(a){const bn=BANNERS[a.banner]||BANNERS[0];return h('div',{class:'pcard'},h('div',{class:'pbanner',style:'background:'+bn}),h('div',{class:'pbody'},paintAcc(h('span',{class:'avatar xl'}),a),
+  h('h3',null,a.name,' ',isAdminId(a.id)?h('span',{class:'tag adm'},'Admin'):null),a.status?h('div',{class:'hint'},a.status):null,
+  a.bio?h('p',{style:'margin:8px 0 0'},a.bio):h('p',{class:'hint',style:'margin:8px 0 0'},'No bio yet.'),a.created?h('div',{class:'hint mono',style:'margin-top:8px'},'Joined '+fmtDT(new Date(a.created))):null))}
+async function photoFromFile(file){if(!file||!/^image\//.test(file.type))throw new Error('Choose an image file.');if(file.size>25e6)throw new Error('That image is too large (25 MB limit).');
+  const url=URL.createObjectURL(file);try{const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error('Could not read that image.'));i.src=url});
+    const S2=112,c=document.createElement('canvas');c.width=c.height=S2;const x=c.getContext('2d');const s=Math.min(img.width,img.height);x.drawImage(img,(img.width-s)/2,(img.height-s)/2,s,s,0,0,S2,S2);return c.toDataURL('image/jpeg',.78)}finally{URL.revokeObjectURL(url)}}
+function openProfileEditor(){const id=meId();const a=S.accounts[id]||S.cache[id];if(!a)return;
+  const st={photo:safePhoto(a),pcolor:/^#[0-9a-fA-F]{6}$/.test(a.pcolor||'')?a.pcolor:'#8b5cf6',banner:Number.isInteger(a.banner)?a.banner:0,bio:a.bio||'',status:a.status||'',frame:a.frame||'none'};
+  const prev=h('div'),err=h('div',{class:'err',role:'alert'});const drawPrev=()=>prev.replaceChildren(profileCard({...a,...st}));
+  const file=h('input',{type:'file',id:'pfPhoto',accept:'image/*',class:'sr',onchange:async()=>{err.textContent='';try{st.photo=await photoFromFile(file.files[0]);drawPrev()}catch(e){err.textContent=e.message}file.value=''}});
+  const sw=h('div',{class:'swatches'}),bn=h('div',{class:'swatches'});
+  const color=h('input',{type:'color',id:'pfColor','aria-label':'Custom colour',value:st.pcolor,oninput:()=>{st.pcolor=color.value;drawSw();drawPrev()}});
+  const drawSw=()=>{sw.replaceChildren(...PCOLORS.map(c=>h('button',{class:'sw',type:'button',style:'background:'+c,'aria-label':'Colour '+c,'aria-pressed':st.pcolor.toLowerCase()===c,onclick:()=>{st.pcolor=c;color.value=c;drawSw();drawPrev()}})),color);
+    bn.replaceChildren(...BANNERS.map((b,i)=>h('button',{class:'sw bn',type:'button',style:'background:'+b,'aria-label':'Banner '+(i+1),'aria-pressed':st.banner===i,onclick:()=>{st.banner=i;drawSw();drawPrev()}})))};
+  const frame=h('select',{id:'pfFrame',onchange:()=>{st.frame=frame.value;drawPrev()}},...[['none','None'],['ring','Ring'],['glitch','Glitch ring'],['sq','Rounded square']].map(([v,l])=>h('option',{value:v,selected:st.frame===v},l)));
+  const status=h('input',{type:'text',id:'pfStatus',maxlength:40,placeholder:'What are you building?',value:st.status,oninput:()=>{st.status=status.value;drawPrev()}});
+  const bio=h('textarea',{id:'pfBio',rows:3,maxlength:120,placeholder:'A line about you',oninput:()=>{st.bio=bio.value;drawPrev()}});bio.value=st.bio;
+  const body=h('div',{class:'pgrid'},prev,h('div',null,
+    h('div',{class:'field'},h('label',null,'Photo'),h('div',{class:'row wrap-r'},h('label',{class:'btn',for:'pfPhoto',style:'cursor:pointer'},icon('plus'),'Choose from photo library'),h('button',{class:'btn',type:'button',onclick:()=>{st.photo='';drawPrev()}},'Remove photo'),file),h('div',{class:'hint'},'Opens your photo library or files. The picture is cropped square and shrunk to a small avatar.')),
+    h('div',{class:'field'},h('label',null,'Colour'),sw),h('div',{class:'field'},h('label',null,'Banner'),bn),
+    h('div',{class:'field'},h('label',{for:'pfFrame'},'Avatar frame'),frame),h('div',{class:'field'},h('label',{for:'pfStatus'},'Status'),status),h('div',{class:'field'},h('label',{for:'pfBio'},'Bio'),bio),err,
+    h('div',{class:'row',style:'justify-content:flex-end'},h('button',{class:'btn',onclick:()=>m.close()},'Cancel'),h('button',{class:'btn primary',onclick:async()=>{try{await D.update('accounts/'+id,{photo:st.photo,pcolor:st.pcolor,banner:st.banner,bio:st.bio.trim(),status:st.status.trim(),frame:st.frame});S.cache[id]={...a,...st,fresh:Date.now()};m.close();render();toast('Profile saved')}catch(e){err.textContent=e.message||'Could not save.'}}},'Save profile'))));
+  const m=modal('My profile',body,{wide:true});drawSw();drawPrev()}
+function openProfile(id){const a=S.accounts[id];if(!a)return;const rel=relWith(id);const body=h('div',null,profileCard(a),h('div',{class:'row wrap-r',style:'margin-top:12px'},
+  id!==meId()?(rel?h('span',{class:'tag '+(rel.status==='accepted'?'good':'')},rel.status==='accepted'?'Friends':'Request pending'):h('button',{class:'btn primary',onclick:()=>{addFriend(id);m.close()}},icon('plus'),'Add friend')):null,
+  isAdmin()&&!isAdminId(id)?h('button',{class:'btn',onclick:()=>{m.close();openUserAdmin(id)}},icon('shield'),'Manage'):null));const m=modal('Profile',body,{narrow:true})}
+
+/* ===== my websites ===== */
+function showSites(){S.lobbyTab='sites';if(S.server)leaveServer(true);S.view='lobby';render()}
+function siteCard(s){const thumb=h('div',{class:'thumb'},h('div',{class:'ph'},'Loading preview…'));
+  const io=new IntersectionObserver(es=>{if(es[0].isIntersecting){io.disconnect();loadSite(s.code).then(d=>{if(!d){thumb.firstChild.textContent='No preview';return}
+    const fr=h('iframe',{title:'Preview of '+(s.siteTitle||s.name),sandbox:'',tabindex:'-1'});fr.srcdoc=d.html;thumb.replaceChildren(fr);const fit=()=>{fr.style.transform=`scale(${(thumb.clientWidth||320)/1280})`};fit();if(window.ResizeObserver)new ResizeObserver(fit).observe(thumb)})}});io.observe(thumb);
+  const isHost=s.host===meId()||isAdmin();
+  return h('article',{class:'card site'},thumb,h('div',null,h('h3',null,s.siteTitle||s.name),h('div',{class:'hint'},s.name,' · ',h('span',{class:'mono'},s.code)),
+    h('div',{class:'hint'},'Updated ',ago(s.siteAt),' · ',Math.max(1,Math.round((s.siteBytes||0)/1024)),' KB')),
+    h('div',{class:'row'},...s.members.slice(0,5).map(id=>avatar(nameOf(id),true)),s.members.length>5?h('span',{class:'hint'},'+'+(s.members.length-5)):null),
+    h('div',{class:'row'},h('button',{class:'btn sm primary',onclick:()=>openServer(s.code)},'Open'),h('button',{class:'btn sm',onclick:()=>previewSite(s.code,s.siteTitle||s.name)},icon('eye'),'Preview'),
+      h('button',{class:'btn sm',onclick:async()=>{const d=await loadSite(s.code);d&&copyText(d.html)}},icon('copy'),'Copy'),h('button',{class:'btn sm',onclick:async()=>{const d=await loadSite(s.code);d&&saveHtml(s.siteTitle||s.name,d.html)}},icon('download'),'Save'),
+      isHost?h('button',{class:'btn sm danger','aria-label':'Delete website',onclick:()=>confirmDialog('Delete website','The website in "'+s.name+'" is deleted for everyone in the server. The server stays.','Delete website',async()=>{await D.del('sites/'+s.code);siteCache.delete(s.code);await D.update('servers/'+s.code,{siteAt:null,siteTitle:'',siteBytes:0})})},icon('trash')):null))}
+function sitesPanel(){const el=h('section',{class:'card',id:'sitesPanel',hidden:true});const grid=h('div',{class:'sites'}),emp=h('div');const cards=new Map();
+  const draw=()=>{const mine=Object.values(S.servers).filter(s=>s.members.includes(meId()));const withSite=mine.filter(s=>s.siteAt).sort((a,b)=>b.siteAt-a.siteAt);const none=mine.filter(s=>!s.siteAt);
+    const keep=new Set();const nodes=withSite.map(s=>{const k=[s.code,s.siteAt,s.siteTitle,s.name,s.members.length].join('|');keep.add(k);if(!cards.has(k))cards.set(k,siteCard(s));return cards.get(k)});
+    for(const k of [...cards.keys()])if(!keep.has(k))cards.delete(k);
+    grid.replaceChildren(...nodes);
+    emp.replaceChildren(...(withSite.length?[]:[h('div',{class:'empty'},zlogo(70),h('strong',null,'No websites yet'),h('span',null,'Type a description in the bar below, or open a server and build one there.'))]),
+      ...(none.length?[h('div',{class:'lbl',style:'margin:16px 0 8px'},'Servers without a website'),h('div',{class:'slist'},...none.map(s=>h('div',{class:'srv'},h('div',{class:'grow',style:'min-width:0'},h('div',null,s.name),h('div',{class:'hint mono'},s.code)),h('button',{class:'btn sm primary',onclick:()=>openServer(s.code)},'Open'))))]:[]))};
+  el.append(h('h2',{style:'margin-bottom:12px'},'My websites'),grid,emp);draw();return{el,update:draw}}
+
+/* ===== lobby ===== */
+function renderLobby(){S.view='lobby';S.server=null;const top=topbar();const cp=createPanel(),jp=joinPanel(),sp=sitesPanel();
+  const panels=h('div',{class:'panels'},cp.el,jp.el);const keys=['create','join','sites'];
+  const setTab=k=>{S.lobbyTab=k;cp.el.dataset.off=k==='create'?0:1;jp.el.dataset.off=k==='join'?0:1;panels.hidden=k==='sites';sp.el.hidden=k!=='sites';[...tabs.children].forEach((b,i)=>b.setAttribute('aria-selected',keys[i]===k))};
+  const tabs=h('div',{class:'tabs',role:'tablist'},...[['create','Create Server'],['join','Join Server'],['sites','My Websites']].map(([k,l])=>h('button',{class:'tab',role:'tab','aria-selected':false,onclick:()=>setTab(k)},l)));
+  const pb=promptBar(async v=>{try{await claimServer({name:v.slice(0,30),privacy:'private',code:newCode(),prompt:v})}catch(e){toast(e.message,'bad')}},'lobbyPrompt');
+  const main=h('main',{class:'wrap lobby'},panels,sp.el,h('div',{class:'hero-z'},zlogo(190),h('div',{class:'slogan',style:'margin:4px 0 0'},'Code your dreams'),h('p',{class:'muted',style:'margin:0;max-width:46ch'},'Describe a website and Zendex builds it. Type below for a solo workspace, or make a server and build with friends.')),pb.el);
+  setMain(top,...banners(),bar2(tabs),main,footer());setTab(S.lobbyTab&&keys.includes(S.lobbyTab)?S.lobbyTab:'create');S.offView=onData(()=>{cp.update();jp.update();sp.update()})}
+
+/* ===== building ===== */
+async function runBuild(text){const code=S.server;if(!code||S.building)return;const m=me();
+  if(S.settings.building===false&&!isAdmin())return toast('An admin has switched building off for now.','bad');
+  if(isMuted(m))return toast('An admin has muted building on your account.','bad');
+  const cur=S.site||{};if(cur.busy&&Date.now()-cur.busy.at<90000&&cur.busy.by!==meId())return toast(cur.busy.name+' is building right now. Try again in a moment.','bad');
+  const tok=S.buildToken=(S.buildToken||0)+1;S.building=true;S.buildStart=Date.now();emitData();const dog=setTimeout(()=>{S.building=false;emitData();toast('That took too long. Try again.','bad')},120000);
+  try{await D.set('sites/'+code,{...cur,busy:{by:meId(),name:m.name,at:Date.now()}});
+    const r=await AI.build(text,cur.html||null,(cur.history||[]).map(x=>x.p).filter(p=>!/^(Edited|Undid)/.test(p)));
+    if(tok!==S.buildToken)return;
+    if(r.html.length>200000)throw new Error('That website is too large to save (limit about 200 KB).');
+    const doc={html:r.html,prev:cur.html&&cur.html.length<100000?cur.html:'',history:[...(cur.history||[]),{by:meId(),name:m.name,p:text.slice(0,300),at:Date.now(),e:r.engine}].slice(-25),busy:null,updated:Date.now()};
+    await D.set('sites/'+code,doc);siteCache.delete(code);await setSiteMeta(code,doc)}
+  catch(e){toast((e&&e.message)||'Build failed','bad');try{await D.set('sites/'+code,{...cur,busy:null})}catch{}}
+  finally{clearTimeout(dog);if(tok===S.buildToken)S.building=false;emitData()}}
+async function cancelBuild(){S.buildToken=(S.buildToken||0)+1;S.building=false;emitData();const code=S.server;if(code){try{const d=await D.get('sites/'+code);if(d&&d.busy&&d.busy.by===meId())await D.set('sites/'+code,{...d,busy:null})}catch{}}toast('Build cancelled')}
+
+/* ===== boot ===== */
+const banState={};
+function checkWarning(){const m=me(),w=m&&m.warning;if(!w||w.ack||S.warnShown===w.at||S.view==='auth')return;S.warnShown=w.at;
+  const mm=modal('Warning from an admin',h('div',null,h('p',null,w.text),h('p',{class:'hint'},'From ',w.by||'an admin','. Please follow the Terms to keep your account.'),h('div',{class:'row',style:'justify-content:flex-end'},h('button',{class:'btn primary',onclick:async()=>{await act(()=>D.update('accounts/'+meId(),{warning:{...w,ack:true}}));mm.close()}},'I understand'))),{narrow:true})}
+function onAccounts(l){S.accounts=Object.fromEntries(l.map(a=>[a._id,a]));emitData();
+  const act0=meId(),before=S.sessions.length;S.sessions=S.sessions.filter(s=>{const a=S.accounts[s.id];return!(a&&a.kickAt&&a.kickAt>(s.since||0))});
+  if(S.sessions.length!==before){S.active=S.sessions.findIndex(s=>s.id===act0);if(S.active<0)S.active=S.sessions.length?0:-1;saveSessions();if(S.server)leaveServer(true);S.view='lobby';render();toast('An admin signed you out.','bad');return}
+  const m=me();
+  if(meId()&&Object.keys(S.accounts).length>3&&!S.accounts[meId()]&&!(S.cache[meId()]&&Date.now()-(S.cache[meId()].fresh||0)<30000)){dropSession(S.active);render();toast('That account no longer exists.','bad');return}
+  if(m){const bb=isBanned(m),prev=banState[m.id];banState[m.id]=bb;if((prev===undefined?bb:prev!==bb)&&S.view!=='auth'){render();return}}checkWarning()}
+async function boot(){loadPrefs();BG.init();applyPrefs();wirePointer();
+  setMain(h('div',{class:'auth'},h('div',{style:'display:grid;justify-items:center;gap:10px'},zlogo(120),wordmark(true),h('div',{class:'slogan'},'Starting up'))));
+  await D.init();await seedAdmins();
+  D.watchCol('accounts',onAccounts);
+  D.watchCol('friendships',l=>{S.friendships=l;emitData();refreshBadge()});
+  D.watchCol('servers',l=>{const m=Object.fromEntries(l.map(s=>[s._id,{...s,members:s.members||[],invited:s.invited||[]}]));
+    for(const c of Object.keys(S.localSrv)){if(m[c])delete S.localSrv[c];else if(Date.now()-S.localSrv[c]<20000&&S.servers[c])m[c]=S.servers[c];else delete S.localSrv[c]}S.servers=m;emitData()});
+  D.watchDoc('config/announcement',d=>{const key=x=>x?x.at+'|'+x.text:'';const changed=S.annInit&&key(S.announce)!==key(d);S.announce=d;S.annInit=1;if(!changed||!d||!d.text)return;if(S.view==='lobby')render();else if(S.view==='workspace')toast('Announcement: '+d.text)});
+  D.watchDoc('config/settings',d=>{const p=S.settings;S.settings={signups:true,building:true,maintenance:false,maintMsg:'',...(d||{})};emitData();if(S.view!=='auth'&&(p.maintenance!==S.settings.maintenance||p.maintMsg!==S.settings.maintMsg))render()});
+  document.addEventListener('zx-mode',()=>{loadSessions();render()});
+  loadSessions();const keep=[];for(const s of S.sessions){const a=await D.get('accounts/'+s.id);if(a&&!isBanned(a)){S.cache[a.id]={...a,fresh:Date.now()};keep.push(s)}}
+  const act1=S.sessions[S.active]&&S.sessions[S.active].id;S.sessions=keep;S.active=Math.max(0,keep.findIndex(s=>s.id===act1));if(!keep.length)S.active=-1;saveSessions();
+  await P.init();P.setSelf('lobby');render();checkWarning()}
+function refreshBadge(){const b=$('.bar2 [aria-label="Friends"]');if(!b)return;let d=$('.dot',b);const n=relCount();if(n){if(!d){d=h('span',{class:'dot'});b.append(d)}d.textContent=n}else if(d)d.remove()}
+
+/* ===== admin: actions ===== */
+const BAN_PRESETS=[['600000','10 minutes'],['3600000','1 hour'],['21600000','6 hours'],['86400000','1 day'],['259200000','3 days'],['604800000','7 days'],['2592000000','30 days'],['custom','Custom…'],['0','Permanent']];
+const fmtDur=ms=>ms>=864e5?Math.round(ms/864e5)+' day(s)':ms>=36e5?Math.round(ms/36e5)+' hour(s)':Math.round(ms/6e4)+' minute(s)';
+const remain=a=>a.until?(a.until-Date.now()>0?fmtDur(a.until-Date.now())+' left':'expired'):'never ends';
+async function alog(action,target,detail){if(!isAdmin())return;try{const t=Date.now();await D.set('audit/'+t+'-'+rnd(3,'abcdefghijk'),{t,by:me().name,action,target:target||'',detail:detail||''})}catch{}}
+function guard(a){if(!isAdmin())throw new Error('Admins only.');if(!a||isAdminId(a.id))throw new Error('Admin accounts are protected.')}
+const A={
+  async ban(a,ms,reason){guard(a);await D.update('accounts/'+a.id,{banned:true,until:ms?Date.now()+ms:null,reason:reason||'',bannedBy:me().name,bannedAt:Date.now(),banCount:(a.banCount||0)+1});alog(ms?'Banned':'Permanently banned',a.name,(ms?fmtDur(ms)+'. ':'')+(reason||''))},
+  async unban(a){guard(a);const was=a.until?'temporary ban':'permanent ban';await D.update('accounts/'+a.id,{banned:false,until:null,reason:''});alog(a.until?'Unbanned':'Lifted permanent ban',a.name,was)},
+  async extend(a,ms){guard(a);const base=Math.max(a.until||0,Date.now());await D.update('accounts/'+a.id,{banned:true,until:base+ms});alog('Extended ban',a.name,'+'+fmtDur(ms))},
+  async makePerma(a){guard(a);await D.update('accounts/'+a.id,{banned:true,until:null});alog('Made ban permanent',a.name,'')},
+  async warn(a,text){guard(a);await D.update('accounts/'+a.id,{warning:{text,at:Date.now(),by:me().name,ack:false}});alog('Warned',a.name,text)},
+  async mute(a,on){guard(a);await D.update('accounts/'+a.id,{muted:on});alog(on?'Muted building':'Unmuted building',a.name,'')},
+  async kick(a){guard(a);await D.update('accounts/'+a.id,{kickAt:Date.now()});alog('Forced log out',a.name,'')},
+  async note(a,t){guard(a);await D.update('accounts/'+a.id,{adminNote:t.slice(0,300)});alog('Edited admin note',a.name,'')},
+  async clearProfile(a){guard(a);await D.update('accounts/'+a.id,{photo:'',bio:'',status:'',frame:'none',banner:0,pcolor:''});alog('Reset profile',a.name,'')},
+  async remove(a){guard(a);await D.del('accounts/'+a.id);await D.del('creds/'+a.id);for(const f of S.friendships.filter(f=>f.a===a.id||f.b===a.id))await D.del('friendships/'+f._id);
+    for(const s of Object.values(S.servers).filter(s=>s.members.includes(a.id))){const rest=s.members.filter(x=>x!==a.id);if(!rest.length)await closeServer(s.code);else await D.update('servers/'+s.code,{members:rest,host:s.host===a.id?rest[0]:s.host})}alog('Deleted account',a.name,'')},
+  async resetPw(a,pw){guard(a);const salt=rnd(8);await D.set('creds/'+a.id,{salt,hash:hashPw(pw,salt)});alog('Reset password',a.name,'')}};
+function banDialog(targets,done){const list=[].concat(targets);const dur=h('select',{id:'banDur'},...BAN_PRESETS.map(([v,l])=>h('option',{value:v,selected:v==='86400000'},l)));
+  const num=h('input',{type:'text',id:'banNum',value:'2',inputmode:'numeric',style:'max-width:90px'}),unit=h('select',{id:'banUnit',style:'max-width:130px'},...[['60000','minutes'],['3600000','hours'],['86400000','days']].map(([v,l])=>h('option',{value:v,selected:v==='86400000'},l)));
+  const cust=h('div',{class:'row',hidden:true},num,unit);dur.onchange=()=>cust.hidden=dur.value!=='custom';const why=h('input',{type:'text',id:'banWhy',maxlength:120,placeholder:'Reason shown to the person'});
+  const m=modal(list.length>1?`Ban ${list.length} accounts`:'Ban '+list[0].name,h('div',null,h('div',{class:'field'},h('label',{for:'banDur'},'Length'),dur,cust),h('div',{class:'field'},h('label',{for:'banWhy'},'Reason'),why),
+    h('div',{class:'row',style:'justify-content:flex-end'},h('button',{class:'btn',onclick:()=>m.close()},'Cancel'),h('button',{class:'btn danger',onclick:async()=>{let ms=dur.value==='custom'?Math.round((+num.value||0)*+unit.value):+dur.value;if(dur.value==='custom'&&ms<=0){toast('Enter a length.','bad');return}
+      for(const a of list)await act(()=>A.ban(a,ms,why.value.trim()));toast(list.length>1?list.length+' accounts banned':list[0].name+' is banned');m.close();done&&done()}},'Apply ban'))),{narrow:true})}
+function permaDialog(targets,done){const list=[].concat(targets);const why=h('input',{type:'text',id:'permWhy',maxlength:120,placeholder:'Reason shown to the person'});
+  const m=modal('Permanent ban',h('div',null,h('p',null,list.length>1?`${list.length} accounts will be banned until an admin lifts it.`:`${list[0].name} will be banned until an admin lifts it.`),h('div',{class:'field'},h('label',{for:'permWhy'},'Reason'),why),
+    h('div',{class:'row',style:'justify-content:flex-end'},h('button',{class:'btn',onclick:()=>m.close()},'Cancel'),h('button',{class:'btn danger',onclick:async()=>{for(const a of list)await act(()=>A.ban(a,0,why.value.trim()));toast('Permanent ban applied');m.close();done&&done()}},'Perma-ban'))),{narrow:true})}
+function resetPwDialog(a){const tmp='Zx-'+rnd(6);const m=modal('Reset password for '+a.name,h('div',null,h('p',null,'Make a new password and give it to ',a.name,'.'),h('div',{class:'field'},h('label',{for:'tmpPw'},'New password'),h('input',{type:'text',id:'tmpPw',value:tmp,readonly:true})),
+  h('div',{class:'row',style:'justify-content:flex-end'},h('button',{class:'btn',onclick:()=>m.close()},'Cancel'),h('button',{class:'btn primary',onclick:async()=>{await act(()=>A.resetPw(a,tmp),'Password reset');copyText(tmp);m.close()}},'Set and copy'))),{narrow:true})}
+function statusTags(a){const t=[];const k=banKind(a);if(k==='perma')t.push(h('span',{class:'tag bad'},'Perma-banned'));else if(k==='temp')t.push(h('span',{class:'tag bad'},'Banned · '+remain(a)));else t.push(h('span',{class:'tag good'},'Active'));
+  if(isMuted(a))t.push(h('span',{class:'tag'},'Muted'));if(a.warning&&!a.warning.ack)t.push(h('span',{class:'tag'},'Warned'));return h('span',{class:'row',style:'gap:4px;flex-wrap:wrap'},...t)}
+
+/* ===== admin: one user ===== */
+function openUserAdmin(id){const a0=S.accounts[id];if(!a0||!isAdmin())return;if(isAdminId(id))return toast('Admin accounts are protected.','bad');
+  const head=h('div'),banSec=h('div',{class:'sect'}),srvSec=h('div',{class:'sect'});
+  const warn=h('textarea',{id:'warnText',rows:2,maxlength:200,placeholder:'Message the person must acknowledge'}),note=h('textarea',{id:'adminNote',rows:2,maxlength:300,placeholder:'Private note, only admins see it'});note.value=a0.adminNote||'';
+  const ext=h('select',{id:'extSel'},...[['3600000','1 hour'],['86400000','1 day'],['604800000','7 days']].map(([v,l])=>h('option',{value:v},l)));
+  const cur=()=>S.accounts[id]||a0;
+  const drawHead=()=>head.replaceChildren(h('div',{class:'pcard'},h('div',{class:'pbanner',style:'height:56px;background:'+(BANNERS[cur().banner]||BANNERS[0])}),h('div',{class:'pbody row',style:'gap:12px;padding-top:10px'},avatar(cur().name),h('div',{class:'grow'},h('strong',null,cur().name),h('div',{class:'hint mono'},id,' · joined ',cur().created?fmtDT(new Date(cur().created)):'?',' · bans: ',cur().banCount||0)),statusTags(cur()))));
+  const drawBan=()=>{if(banSec.contains(document.activeElement)&&document.activeElement.tagName!=='BODY')return;const a=cur(),k=banKind(a);
+    banSec.replaceChildren(h('h4',null,'Ban controls'),k!=='none'?h('p',{style:'margin:0 0 10px'},k==='perma'?'Permanently banned.':'Banned until '+new Date(a.until).toLocaleString()+' ('+remain(a)+').',a.reason?' Reason: '+a.reason:''):null,
+      h('div',{class:'row wrap-r'},k==='none'?h('button',{class:'btn danger',onclick:()=>banDialog(a)},icon('ban'),'Ban…'):null,k==='none'?h('button',{class:'btn danger',onclick:()=>permaDialog(a)},'Perma-ban'):null,
+        k==='temp'?h('button',{class:'btn',onclick:()=>act(()=>A.unban(a),'Unbanned')},'Unban'):null,k==='perma'?h('button',{class:'btn',onclick:()=>act(()=>A.unban(a),'Permanent ban lifted')},'Lift perma-ban'):null,
+        k==='temp'?h('button',{class:'btn danger',onclick:()=>act(()=>A.makePerma(a),'Made permanent')},'Make permanent'):null,
+        k==='temp'?h('span',{class:'row'},ext,h('button',{class:'btn',onclick:()=>act(()=>A.extend(a,+ext.value),'Ban extended')},'Extend')):null))};
+  const drawSrv=()=>{const ss=Object.values(S.servers).filter(s=>s.members.includes(id));srvSec.replaceChildren(h('h4',null,'Their servers'),...(ss.length?ss.map(s=>h('div',{class:'srv',style:'margin-bottom:6px'},h('div',{class:'grow',style:'min-width:0'},s.name,h('div',{class:'hint mono'},s.code,s.host===id?' · host':'')),
+      h('button',{class:'btn sm',onclick:()=>act(async()=>{const rest=s.members.filter(x=>x!==id);if(!rest.length)await closeServer(s.code);else await D.update('servers/'+s.code,{members:rest,host:s.host===id?rest[0]:s.host});alog('Removed from server',cur().name,s.code)},'Removed')},'Remove'),
+      s.siteAt?h('button',{class:'btn sm',onclick:()=>previewSite(s.code,s.siteTitle||s.name)},'Preview'):null)):[h('div',{class:'hint'},'Not in any server.')]))};
+  const body=h('div',null,head,banSec,
+    h('div',{class:'sect'},h('h4',null,'Warn'),h('div',{class:'field'},warn),h('button',{class:'btn',onclick:()=>{if(!warn.value.trim())return toast('Write a message first.','bad');act(()=>A.warn(cur(),warn.value.trim()),'Warning sent');warn.value=''}},'Send warning')),
+    h('div',{class:'sect'},h('h4',null,'Account actions'),h('div',{class:'row wrap-r'},
+      h('button',{class:'btn',id:'muteBtn',onclick:()=>act(()=>A.mute(cur(),!isMuted(cur())),isMuted(cur())?'Unmuted':'Muted')},isMuted(a0)?'Unmute building':'Mute building'),
+      h('button',{class:'btn',onclick:()=>act(()=>A.kick(cur()),'Signed out everywhere')},'Force log out'),h('button',{class:'btn',onclick:()=>resetPwDialog(cur())},'Reset password'),
+      h('button',{class:'btn',onclick:()=>act(()=>A.clearProfile(cur()),'Profile reset')},'Reset profile look'),
+      h('button',{class:'btn danger',onclick:()=>confirmDialog('Delete '+cur().name,'This deletes the account and its friendships. It cannot be undone.','Delete account',async()=>{await A.remove(cur());m.close()})},icon('trash'),'Delete account'))),
+    h('div',{class:'sect'},h('h4',null,'Admin note'),h('div',{class:'field'},note),h('button',{class:'btn',onclick:()=>act(()=>A.note(cur(),note.value),'Note saved')},'Save note')),srvSec);
+  const m=modal('Manage '+a0.name,body,{wide:true});const redraw=()=>{drawHead();drawBan();drawSrv();const b=$('#muteBtn',body);if(b)b.textContent=isMuted(cur())?'Unmute building':'Mute building'};redraw();m.live(redraw)}
+
+/* ===== admin: panel ===== */
+function openAdmin(){if(!isAdmin())return toast('Admins only','bad');let tab='overview',filter='all',sort='name';const sel=new Set();let off;
+  const body=h('div'),tabs=h('div',{class:'tabsm'}),pane=h('div');const m=modal('Admin panel',body,{wide:true,onClose:()=>off&&off()});
+  const q=h('input',{type:'search',id:'adminQ',placeholder:'Search users',autocomplete:'off'}),fsel=h('select',{id:'adminFilter','aria-label':'Filter users'},...[['all','Everyone'],['active','Active'],['banned','Banned'],['temp','Temporarily banned'],['perma','Perma-banned'],['muted','Muted'],['warned','Warned'],['admins','Admins']].map(([v,l])=>h('option',{value:v},l)));
+  const ssel=h('select',{id:'adminSort','aria-label':'Sort users'},...[['name','Name'],['new','Newest'],['old','Oldest'],['bans','Most bans']].map(([v,l])=>h('option',{value:v},l)));
+  const ann=h('textarea',{id:'annText',rows:3,maxlength:240,placeholder:'Message for everyone (shown as a banner)'});ann.value=S.announce&&S.announce.text||'';
+  const mmsg=h('input',{type:'text',id:'maintMsg',maxlength:140,placeholder:'Message shown during maintenance',value:S.settings.maintMsg||''});
+  const wsel=h('select',{id:'wsel',style:'display:none'});
+  fsel.onchange=()=>{filter=fsel.value;draw()};ssel.onchange=()=>{sort=ssel.value;draw()};q.addEventListener('input',()=>draw());
+  const tbl=(heads,rows)=>h('div',{class:'tblw'},h('table',null,h('thead',null,h('tr',null,heads.map(x=>h('th',null,x)))),h('tbody',null,...rows)));
+  const nameCell=a=>h('td',null,h('div',{class:'row',style:'gap:8px'},avatar(a.name,true),h('button',{class:'linkbtn',style:'text-decoration:none;color:inherit',onclick:()=>openProfile(a.id)},a.name)));
+  const setCfg=(k,v)=>act(()=>D.set('config/settings',{...S.settings,[k]:v}).then(()=>alog('Changed setting',k,String(v))));
+  const sw=(label,sub,key)=>{const b=h('button',{class:'tog',role:'switch','aria-pressed':!!S.settings[key],'aria-label':label,onclick:()=>setCfg(key,!S.settings[key])});return h('div',{class:'switch'},h('div',null,h('div',null,label),h('div',{class:'hint'},sub)),b)};
+  const users=()=>{const t=q.value.trim().toLowerCase();let r=Object.values(S.accounts).filter(a=>(!t||a.name.toLowerCase().includes(t))&&({all:1,active:!isBanned(a)&&!isAdminId(a.id),banned:isBanned(a),temp:banKind(a)==='temp',perma:banKind(a)==='perma',muted:isMuted(a),warned:a.warning&&!a.warning.ack,admins:isAdminId(a.id)}[filter]));
+    return r.sort((a,b)=>(isAdminId(b.id)-isAdminId(a.id))||(sort==='new'?(b.created||0)-(a.created||0):sort==='old'?(a.created||0)-(b.created||0):sort==='bans'?(b.banCount||0)-(a.banCount||0):a.name.localeCompare(b.name)))};
+  const draw=()=>{const labels=[['overview','Overview'],['users','Users'],['bans','Bans'],['servers','Servers'],['sites','Websites'],['activity','Activity'],['controls','Controls']];
+    tabs.replaceChildren(...labels.map(([k,l])=>h('button',{class:'tab','aria-selected':tab===k,onclick:()=>{tab=k;draw()}},l)));const accs=Object.values(S.accounts);let out;
+    if(tab==='overview'){const online=P.lobby?P.lobbyPeers().filter(p=>!p.isMe&&p.presence&&p.presence.id).length+1:'n/a';const nw=accs.slice().sort((a,b)=>(b.created||0)-(a.created||0)).slice(0,5);
+      out=h('div',null,h('div',{class:'stats'},...[['Accounts',accs.length],['Banned',accs.filter(isBanned).length],['Perma-banned',accs.filter(a=>banKind(a)==='perma').length],['Muted',accs.filter(isMuted).length],['Servers',Object.keys(S.servers).length],['Websites',Object.values(S.servers).filter(s=>s.siteAt).length],['Online now',online]].map(([l,v])=>h('div',{class:'stat'},h('b',null,v),h('span',null,l)))),
+        h('div',{class:'pgrid',style:'grid-template-columns:1fr 1fr'},h('div',{class:'sect'},h('h4',null,'Newest accounts'),...nw.map(a=>h('div',{class:'row',style:'margin-bottom:6px'},avatar(a.name,true),h('span',{class:'grow'},a.name),h('span',{class:'hint mono'},a.created?ago(a.created):'')))),
+          h('div',{class:'sect'},h('h4',null,'Recent activity'),h('div',{class:'log'},...(S.audit.slice(0,6).map(e=>h('div',null,h('strong',null,e.by),' · ',e.act,' ',e.target,h('br'),h('small',null,ago(e.t)))))||[]),!S.audit.length?h('div',{class:'hint'},'Nothing yet.'):null)),
+        h('p',{class:'hint'},'Storage: ',D.mode==='cloud'?'shared database. Everyone sees the same accounts.':'this device only.',S.settings.maintenance?' · Maintenance mode is ON.':'',S.settings.signups===false?' · Sign-ups are closed.':''))}
+    if(tab==='users'){const rows=users();for(const id of [...sel])if(!S.accounts[id]||isAdminId(id))sel.delete(id);const ids=rows.filter(a=>!isAdminId(a.id)).map(a=>a.id);
+      const picked=[...sel].map(i=>S.accounts[i]).filter(Boolean);const all=h('input',{type:'checkbox','aria-label':'Select all shown',checked:ids.length&&ids.every(i=>sel.has(i)),onchange:e=>{ids.forEach(i=>e.target.checked?sel.add(i):sel.delete(i));draw()}});
+      out=h('div',null,h('div',{class:'toolbar'},q,fsel,ssel),
+        picked.length?h('div',{class:'bulk'},h('strong',null,picked.length+' selected'),h('button',{class:'btn sm danger',onclick:()=>banDialog(picked,()=>{sel.clear();draw()})},'Ban…'),h('button',{class:'btn sm danger',onclick:()=>permaDialog(picked,()=>{sel.clear();draw()})},'Perma-ban'),
+          h('button',{class:'btn sm',onclick:async()=>{for(const a of picked)if(isBanned(a))await act(()=>A.unban(a));toast('Unbanned');draw()}},'Unban'),h('button',{class:'btn sm',onclick:async()=>{for(const a of picked)await act(()=>A.mute(a,true));toast('Muted');draw()}},'Mute'),
+          h('button',{class:'btn sm',onclick:async()=>{for(const a of picked)await act(()=>A.kick(a));toast('Signed out');draw()}},'Force log out'),
+          h('button',{class:'btn sm danger',onclick:()=>confirmDialog('Delete '+picked.length+' accounts','This cannot be undone.','Delete',async()=>{for(const a of picked)await act(()=>A.remove(a));sel.clear();draw()})},icon('trash')),h('button',{class:'btn sm',onclick:()=>{sel.clear();draw()}},'Clear')):null,
+        tbl([h('span',null,all),'User','Role','Joined','Status','Actions'].map(x=>x),rows.map(a=>{const ad=isAdminId(a.id),k=banKind(a);return h('tr',null,h('td',null,ad?'':h('input',{type:'checkbox','aria-label':'Select '+a.name,checked:sel.has(a.id),onchange:e=>{e.target.checked?sel.add(a.id):sel.delete(a.id);draw()}})),nameCell(a),h('td',null,ad?h('span',{class:'tag adm'},'Admin'):'User'),h('td',null,a.created?fmtDT(new Date(a.created)):''),h('td',null,statusTags(a)),
+          h('td',null,ad?h('span',{class:'hint'},'Protected'):h('div',{class:'row'},k==='none'?h('button',{class:'btn sm danger',onclick:()=>banDialog(a)},icon('ban'),'Ban…'):null,k==='none'?h('button',{class:'btn sm danger',onclick:()=>permaDialog(a)},'Perma-ban'):null,
+            k==='temp'?h('button',{class:'btn sm',onclick:()=>act(()=>A.unban(a),'Unbanned')},'Unban'):null,k==='perma'?h('button',{class:'btn sm',onclick:()=>act(()=>A.unban(a),'Permanent ban lifted')},'Lift perma-ban'):null,h('button',{class:'btn sm',onclick:()=>openUserAdmin(a.id)},'Manage'))))})),
+        !rows.length?h('p',{class:'hint'},'No one matches.'):null)}
+    if(tab==='bans'){const bl=accs.filter(isBanned).sort((a,b)=>(b.bannedAt||0)-(a.bannedAt||0));const expired=accs.filter(a=>a.banned&&!isBanned(a));
+      out=h('div',null,h('div',{class:'toolbar'},h('button',{class:'btn danger',disabled:!bl.length,onclick:()=>confirmDialog('Unban everyone','Lifts '+bl.length+' ban(s), including permanent ones.','Unban all',async()=>{for(const a of bl)await act(()=>A.unban(a));toast('Everyone is unbanned')})},'Unban all'),
+        h('button',{class:'btn',disabled:!expired.length,onclick:async()=>{for(const a of expired)await act(()=>D.update('accounts/'+a.id,{banned:false,until:null,reason:''}));toast('Cleared '+expired.length+' expired ban(s)')}},'Clear expired ('+expired.length+')')),
+        bl.length?tbl(['User','Type','Ends','Reason','By','When','Actions'],bl.map(a=>h('tr',null,nameCell(a),h('td',null,h('span',{class:'tag bad'},banKind(a)==='perma'?'Permanent':'Temporary')),h('td',null,banKind(a)==='perma'?'Never':new Date(a.until).toLocaleString()+' ('+remain(a)+')'),h('td',{style:'white-space:normal;min-width:140px'},a.reason||'—'),h('td',null,a.bannedBy||'—'),h('td',null,a.bannedAt?ago(a.bannedAt):''),
+          h('td',null,h('div',{class:'row'},h('button',{class:'btn sm',onclick:()=>act(()=>A.unban(a),'Unbanned')},banKind(a)==='perma'?'Lift perma-ban':'Unban'),banKind(a)==='temp'?h('button',{class:'btn sm danger',onclick:()=>act(()=>A.makePerma(a),'Made permanent')},'Make permanent'):null,banKind(a)==='temp'?h('button',{class:'btn sm',onclick:()=>act(()=>A.extend(a,864e5),'Extended by a day')},'+1 day'):null))))):h('p',{class:'hint'},'Nobody is banned.'))}
+    if(tab==='servers'){const ss=Object.values(S.servers).sort((a,b)=>(b.created||0)-(a.created||0));
+      out=tbl(['Code','Name','Host','Type','Members','Actions'],ss.length?ss.map(s=>h('tr',null,h('td',{class:'mono'},s.code),h('td',null,s.name),h('td',null,nameOf(s.host)),h('td',null,s.privacy),h('td',null,s.members.map(nameOf).join(', ')),
+        h('td',null,h('div',{class:'row'},h('button',{class:'btn sm',onclick:()=>act(()=>D.update('servers/'+s.code,{privacy:s.privacy==='public'?'private':'public'}).then(()=>alog('Changed server type',s.code,'')))},s.privacy==='public'?'Make private':'Make public'),
+          h('button',{class:'btn sm',onclick:()=>{const i=h('input',{type:'text',id:'rnSrv',maxlength:30,value:s.name});const d=modal('Rename server',h('div',null,h('div',{class:'field'},h('label',{for:'rnSrv'},'Name'),i),h('div',{class:'row',style:'justify-content:flex-end'},h('button',{class:'btn primary',onclick:async()=>{await act(()=>D.update('servers/'+s.code,{name:cleanName(i.value)||s.name}).then(()=>alog('Renamed server',s.code,i.value)),'Renamed');d.close()}},'Save'))),{narrow:true})}},'Rename'),
+          h('button',{class:'btn sm danger',onclick:()=>confirmDialog('Close '+s.code,'This deletes the server and its website.','Close server',()=>closeServer(s.code).then(()=>alog('Closed server',s.code,s.name)))},'Close'))))):[h('tr',null,h('td',{colspan:6,class:'hint'},'No servers yet.'))])}
+    if(tab==='sites'){const ws=Object.values(S.servers).filter(s=>s.siteAt).sort((a,b)=>b.siteAt-a.siteAt);
+      out=tbl(['Website','Server','Host','Size','Updated','Actions'],ws.length?ws.map(s=>h('tr',null,h('td',null,s.siteTitle||'Untitled'),h('td',null,s.name,' ',h('span',{class:'hint mono'},s.code)),h('td',null,nameOf(s.host)),h('td',null,Math.max(1,Math.round((s.siteBytes||0)/1024))+' KB'),h('td',null,ago(s.siteAt)),
+        h('td',null,h('div',{class:'row'},h('button',{class:'btn sm',onclick:()=>previewSite(s.code,s.siteTitle||s.name)},icon('eye'),'Preview'),h('button',{class:'btn sm danger',onclick:()=>confirmDialog('Delete website','Deletes the website in '+s.name+'. The server stays.','Delete website',async()=>{await D.del('sites/'+s.code);siteCache.delete(s.code);await D.update('servers/'+s.code,{siteAt:null,siteTitle:'',siteBytes:0});alog('Deleted website',s.code,s.siteTitle||'')})},icon('trash')))))):[h('tr',null,h('td',{colspan:6,class:'hint'},'No websites yet.'))])}
+    if(tab==='activity')out=h('div',null,h('div',{class:'toolbar'},h('button',{class:'btn danger',disabled:!S.audit.length,onclick:()=>confirmDialog('Clear activity log','Deletes all '+S.audit.length+' entries.','Clear log',async()=>{for(const e of S.audit)await D.del('audit/'+e._id)})},'Clear log')),
+      S.audit.length?h('div',{class:'log'},...S.audit.slice(0,150).map(e=>h('div',null,h('strong',null,e.by),' · ',e.act,e.target?' · '+e.target:'',e.detail?' · '+e.detail:'',h('br'),h('small',null,new Date(e.t).toLocaleString())))):h('p',{class:'hint'},'No admin actions yet.'));
+    if(tab==='controls')out=h('div',null,h('div',{class:'sect'},h('h4',null,'Site controls'),sw('Sign-ups open','Turn off to stop new accounts.','signups'),sw('Building on','Turn off to stop everyone except admins from building.','building'),sw('Maintenance mode','Everyone except admins sees a "back soon" screen.','maintenance'),
+        h('div',{class:'field',style:'margin-top:10px'},h('label',{for:'maintMsg'},'Maintenance message'),mmsg,h('div',null,h('button',{class:'btn sm',style:'margin-top:8px',onclick:()=>setCfg('maintMsg',mmsg.value.trim())},'Save message')))),
+      h('div',{class:'sect'},h('h4',null,'Announcement'),h('div',{class:'field'},ann),h('div',{class:'row'},h('button',{class:'btn primary',onclick:()=>act(()=>D.set('config/announcement',{text:ann.value.trim(),at:Date.now(),by:me().name}).then(()=>alog('Posted announcement','',ann.value.trim())),'Announcement posted')},'Post to everyone'),
+        h('button',{class:'btn',onclick:()=>act(()=>D.set('config/announcement',{text:'',at:Date.now(),by:me().name}).then(()=>{ann.value=''}),'Announcement cleared')},'Clear'))));
+    pane.replaceChildren(out)};
+  body.append(tabs,pane);draw();
+  let pruned=false;off=D.watchCol('audit',l=>{S.audit=l.sort((a,b)=>b.t-a.t);if(S.audit.length>300&&!pruned){pruned=true;S.audit.slice(250).forEach(e=>D.del('audit/'+e._id))}if(tab==='overview'||tab==='activity')draw()});
+  m.live(()=>{const f=document.activeElement;if(f&&pane.contains(f)&&(f.tagName==='INPUT'&&f.type!=='checkbox'||f.tagName==='TEXTAREA'||f.tagName==='SELECT'))return;draw()})}
+boot();
+</script>
+
+</body></html>
